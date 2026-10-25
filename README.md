@@ -220,50 +220,90 @@ erDiagram
 
 ## 🚀 ៧. របៀបតម្លើង និងដំណើរការ (Installation & Quickstart Guide)
 
-### លក្ខខណ្ឌតម្រូវជាមុន (Prerequisites):
-- [Node.js](https://nodejs.org/) (កំណែ Version 18.x ឬខ្ពស់ជាងនេះ)
-- កម្មវិធីរុករកគេហទំព័រ (Chrome, Edge, Firefox)
+### 📋 លក្ខខណ្ឌតម្រូវជាមុន (Prerequisites):
+- [Node.js](https://nodejs.org/) (កំណែ Version 18.x ឬខ្ពស់ជាងនេះ - អាចឆែកដោយវាយ `node -v`)
+- កម្មវិធីរុករកគេហទំព័រ (Google Chrome, Microsoft Edge, Firefox, ឬ Safari)
 
-### ជំហានទី ១: តម្លើង Dependencies
-បើក Terminal (Command Prompt ឬ PowerShell) ក្នុង Folder គម្រោង ហើយដំណើរការ៖
+---
+
+### ជំហានទី ១: តម្លើង Dependencies (បើកម្តងដំបូង)
+បើក Terminal (Command Prompt ឬ PowerShell) ក្នុង Folder គម្រោង `Restaurant Ordering System` ហើយដំណើរការ៖
 
 ```bash
-# ១. តម្លើង Dependencies សម្រាប់ Backend
+# ១. តម្លើងបណ្ណាល័យសម្រាប់ Backend
 cd backend
 npm install
 
-# ២. តម្លើង Dependencies សម្រាប់ Frontend
+# ២. តម្លើងបណ្ណាល័យសម្រាប់ Frontend
 cd ../frontend
 npm install
 ```
 
+---
+
 ### ជំហានទី ២: បញ្ចូលទិន្នន័យគំរូដំបូង (Seed Database)
-នៅក្នុង Folder `backend` ដំណើរការបញ្ជាខាងក្រោមដើម្បីបង្កើតតារាង និងបញ្ចូលមុខម្ហូបគំរូ៖
+ដំណើរការបញ្ជាខាងក្រោមដើម្បីបង្កើតតារាង និងទិន្នន័យគំរូ (Admin account, Categories, Menu items):
 
 ```bash
 cd backend
-node database/seed.js
+npm run seed
 ```
+> *Output ជោគជ័យនឹងបង្ហាញ៖ `🌱 Seeding database... ✅ Users seeded ✅ Categories seeded ✅ Menu items seeded 🚀 Database seeding complete!`*
+
+---
 
 ### ជំហានទី ៣: ដំណើរការប្រព័ន្ធ (Start the Application)
-លោកអ្នកអាចដំណើរការតាម ២ វិធី៖
 
-#### វិធីសាស្ត្រទី ១: ចុចលើ File `run.bat` (ងាយស្រួលបំផុតសម្រាប់ Windows 🌟)
-គ្រាន់តែ Double-click លើឯកសារ `run.bat` នៅខាងក្រៅ Folder វានឹងបើកដំណើរការទាំង Backend និង Frontend ព្រមគ្នាដោយស្វ័យប្រវត្តិ!
+លោកអ្នកអាចជ្រើសរើសដំណើរការតាម ២ វិធី៖
 
-#### វិធីសាស្ត្រទី ២: ដំណើរការដោយប្រើ Terminal ដោយឡែកពីគ្នា
-* **Terminal ទី ១ (Backend API):**
+#### 🌟 វិធីសាស្ត្រទី ១: ដំណើរការដោយចុចតែម្តង (One-Click Launch សម្រាប់ Windows)
+គ្រាន់តែ **Double-Click (ចុចពីរដង)** លើឯកសារ **`run.bat`** ដែលស្ថិតនៅក្រៅ Folder គម្រោង៖
+- ប្រព័ន្ធនឹងបើក Terminal ពីរដាច់ដោយឡែកដោយស្វ័យប្រវត្តិ (មួយសម្រាប់ Backend API និងមួយទៀតសម្រាប់ React Frontend)។
+- បន្ទាប់មកបើក Browser ចូលទៅកាន់៖ **`http://localhost:5173`** នោះលោកអ្នកនឹងឃើញប្រព័ន្ធដំណើរការភ្លាមៗ!
+
+#### 💻 វិធីសាស្ត្រទី ២: ដំណើរការដោយប្រើ Terminal ដោយឡែកពីគ្នា
+ប្រសិនបើលោកអ្នកចង់ Run ដោយផ្ទាល់តាម Command Line៖
+
+* **Terminal ទី ១ (ដំណើរការ Backend Express API):**
   ```bash
   cd backend
   npm run dev
-  # Server នឹងដំណើរការនៅ: http://localhost:5000
   ```
-* **Terminal ទី ២ (Frontend UI):**
+  *(Server នឹងដំណើរការនៅ: `http://localhost:5000` & Health Check: `http://localhost:5000/api/health`)*
+
+* **Terminal ទី ២ (ដំណើរការ React Frontend Web Client):**
   ```bash
   cd frontend
   npm run dev
-  # Web App នឹងដំណើរការនៅ: http://localhost:5173
   ```
+  *(Web App នឹងដំណើរការនៅ: `http://localhost:5173`)*
+
+---
+
+### 🌐 អាសយដ្ឋានតំណភ្ជាប់នៃប្រព័ន្ធ (System Endpoints & URLs):
+- 🍽️ **Customer Menu & Ordering Portal:** [http://localhost:5173](http://localhost:5173)
+- 📡 **Live Order Tracker:** ចុចលើ Tab *"Live Tracker"* ឬចូលតាមទំព័រវិក្កយបត្រ
+- 👨‍🍳 **Kitchen Display Station (KDS):** ចុចលើ Tab *"Kitchen KDS"* (គ្រប់គ្រង Order ផ្ទាល់)
+- ⚙️ **Backend REST API Health Check:** [http://localhost:5000/api/health](http://localhost:5000/api/health)
+- 📋 **Backend Menu API:** [http://localhost:5000/api/menu](http://localhost:5000/api/menu)
+- 📦 **Backend Active Orders API:** [http://localhost:5000/api/orders](http://localhost:5000/api/orders)
+
+---
+
+### 🧪 ជំហានធ្វើតេស្តសាកល្បងលំហូរការងារ (Verification Test Guide):
+1. **តេស្តកុម្ម៉ង់មុខម្ហូប (Customer Order):**
+   - ចូលទៅកាន់ `http://localhost:5173`
+   - ចុចជ្រើសរើសមុខម្ហូប (ឧ. *Truffle Glazed Wagyu Ribeye*) ➔ រើសកម្រិតហិរ និង Add-on ➔ ចុច "Add to Order"
+   - ចុចលើបដា Hot Offer ឬវាយកូដ `AURAVIP15` ក្នុងកន្ត្រកដើម្បីទទួលបានការបញ្ចុះតម្លៃ -15%
+   - ចុច "Proceed to Checkout" ➔ បំពេញឈ្មោះ និងលេខទូរស័ព្ទ ➔ ចុច "Place Order Now"
+   - ប្រព័ន្ធនឹងបន្លឺសំឡេងរោទិ៍ (Audio Chime) និងបង្ហាញផ្ទាំងវិក្កយបត្របញ្ជាក់ការទិញ!
+2. **តេស្តតាមដានស្ថានភាព (Live Tracker):**
+   - ចុចប៊ូតុង "Track Order Live" ➔ លោកអ្នកនឹងឃើញ Order Progress Stepper បង្ហាញស្ថានភាពជាក់ស្តែង។
+3. **តេស្តផ្ទាំងផ្ទះបាយ (Kitchen KDS):**
+   - ចុចលើ Tab "Kitchen KDS" ➔ លោកអ្នកនឹងឃើញ Ticket នៃ Order ដែលទើបតែកម្ម៉ង់
+   - ចុចប៊ូតុង "Start Cooking" ➔ Status នឹងប្តូរទៅ Cooking (ពណ៌ខៀវ)
+   - ចុចប៊ូតុង "Mark Ready" ➔ ប្រព័ន្ធនឹងបន្លឺសំឡេងកណ្ដឹងប្រាប់ថាម្ហូបឆ្អិនរួចរាល់!
+   - អាចចុចប៊ូតុង "+ Simulate New Order" ដើម្បីបង្កើត Order សាកល្បងដោយស្វ័យប្រវត្តិក៏បាន។
 
 ---
 
