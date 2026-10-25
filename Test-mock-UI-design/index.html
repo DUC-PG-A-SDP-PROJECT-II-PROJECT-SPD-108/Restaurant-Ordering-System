@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aura Bistro - Modern Restaurant Ordering System</title>
+  <meta name="description" content="Experience gourmet dining with our interactive online ordering system. Browse artisanal dishes, customize orders, and track your food in real-time.">
+  
+  <!-- Google Fonts: Plus Jakarta Sans & Outfit -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  
+  <!-- Core Stylesheet -->
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- Navigation Bar -->
+  <header class="navbar" id="main-navbar">
+    <div class="nav-container">
+      <div class="brand-logo" id="brand-logo">
+        <div class="logo-icon"><i class="fa-solid fa-utensils"></i></div>
+        <div class="logo-text">
+          <span class="brand-name">Restaurant</span>
+          <span class="brand-subtitle">Ordering  &amp; System </span>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs (Customer / Kitchen Management) -->
+      <nav class="nav-links" id="nav-navigation">
+        <button class="nav-tab active" id="tab-menu-btn" data-view="customer-view">
+          <i class="fa-solid fa-book-open"></i> <span>Menu &amp; Order</span>
+        </button>
+        <button class="nav-tab" id="tab-track-btn" data-view="tracker-view">
+          <i class="fa-solid fa-clock-rotate-left"></i> <span>Live Tracker</span>
+          <span class="badge active-orders-badge" id="active-orders-count" style="display:none;">0</span>
+        </button>
+        <button class="nav-tab" id="tab-kitchen-btn" data-view="kitchen-view">
+          <i class="fa-solid fa-fire-burner"></i> <span>Kitchen KDS</span>
+          <span class="badge kitchen-badge" id="kitchen-pending-count" style="display:none;">0</span>
+        </button>
+      </nav>
+
+      <!-- Right Header Actions -->
+      <div class="nav-actions">
+        <!-- Dining Mode Indicator -->
+        <div class="dining-mode-selector" id="dining-mode-container">
+          <button class="mode-pill active" id="mode-dinein" data-mode="dine-in">
+            <i class="fa-solid fa-champagne-glasses"></i> Dine-In
+          </button>
+          <button class="mode-pill" id="mode-takeout" data-mode="takeout">
+            <i class="fa-solid fa-bag-shopping"></i> Takeaway
+          </button>
+        </div>
+
+        <!-- Theme Toggle -->
+        <button class="icon-button" id="theme-toggle-btn" aria-label="Toggle Theme" title="Switch Theme">
+          <i class="fa-solid fa-moon"></i>
+        </button>
+
+        <!-- Cart Quick Trigger (Mobile / Desktop) -->
+        <button class="cart-trigger-btn" id="open-cart-btn" aria-label="Open Shopping Cart">
+          <div class="cart-icon-wrapper">
+            <i class="fa-solid fa-cart-shopping"></i>
+            <span class="cart-badge" id="nav-cart-count">0</span>
+          </div>
+          <span class="cart-total-preview" id="nav-cart-total">$0.00</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="main-content" id="app-container">
+
+    <!-- ========================================== -->
+    <!-- VIEW 1: CUSTOMER ORDERING VIEW             -->
+    <!-- ========================================== -->
+    <section class="app-view active-view" id="customer-view">
+      
+      <!-- Hero Banner -->
+      <div class="hero-banner">
+        <div class="hero-content">
+          <div class="hero-pill"><i class="fa-solid fa-award"></i> Michelin Recommended 2026</div>
+          <h1 class="hero-title">Culinary Perfection, <br><span class="text-gradient">Crafted For You</span></h1>
+          <p class="hero-desc">Indulge in seasonal ingredients, wood-fired specials, and handcrafted cocktails made to order.</p>
+          <div class="hero-quick-info">
+            <div class="info-item"><i class="fa-solid fa-clock"></i> <span>Avg Prep: <strong>15-20 mins</strong></span></div>
+            <div class="info-item"><i class="fa-solid fa-chair"></i> <span id="hero-dining-label">Dine-In Table: <strong>#04</strong></span></div>
+            <div class="info-item"><i class="fa-solid fa-shield-halved"></i> <span>100% Fresh Guaranteed</span></div>
+          </div>
+        </div>
+        <div class="hero-promo-card">
+          <div class="promo-badge">HOT OFFER</div>
+          <h3>Enjoy 15% Off Your Feast</h3>
+          <p>Use voucher code <code class="promo-code-copy" id="hero-voucher-code" title="Click to copy">AURAVIP15</code> at checkout!</p>
+          <button class="btn btn-sm btn-accent" id="apply-hero-voucher-btn">Apply To Cart</button>
+        </div>
+      </div>
+
+      <!-- Search, Dietary Filters & Sort Bar -->
+      <div class="menu-control-bar">
+        <div class="search-input-wrapper">
+          <i class="fa-solid fa-magnifying-glass search-icon"></i>
+          <input type="text" id="menu-search-input" placeholder="Search dishes, ingredients, drinks..." autocomplete="off">
+          <button class="clear-search-btn" id="clear-search-btn" style="display:none;"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+
+        <div class="dietary-filter-group" id="dietary-filters">
+          <button class="dietary-chip active" data-filter="all">All Items</button>
+          <button class="dietary-chip" data-filter="vegetarian"><i class="fa-solid fa-leaf"></i> Vegetarian</button>
+          <button class="dietary-chip" data-filter="spicy"><i class="fa-solid fa-pepper-hot"></i> Spicy</button>
+          <button class="dietary-chip" data-filter="chef"><i class="fa-solid fa-star"></i> Chef's Pick</button>
+        </div>
+
+        <div class="sort-selector-wrapper">
+          <label for="menu-sort-select"><i class="fa-solid fa-arrow-down-short-wide"></i> Sort:</label>
+          <select id="menu-sort-select">
+            <option value="featured">Featured First</option>
+            <option value="price-low">Price: Low to High</option>
+            <option value="price-high">Price: High to Low</option>
+            <option value="rating">Highest Rated</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Categories Scroll Navigation -->
+      <div class="category-nav-wrapper">
+        <div class="category-pills" id="category-pills-list">
+          <!-- Dynamically populated categories -->
+        </div>
+      </div>
+
+      <!-- Menu Layout Grid with Sidebar Cart -->
+      <div class="layout-split">
+        <!-- Menu Items Section -->
+        <div class="menu-section">
+          <div class="section-header-row">
+            <div>
+              <h2 class="section-title" id="active-category-title">All Signature Dishes</h2>
+              <p class="section-subtitle" id="active-category-desc">Curated by Executive Chef Marco Rossi</p>
+            </div>
+            <span class="items-count-indicator" id="items-count-indicator">Showing 12 items</span>
+          </div>
+
+          <!-- Items Grid -->
+          <div class="dishes-grid" id="dishes-grid-container">
+            <!-- Dishes injected via JavaScript -->
+          </div>
+
+          <!-- Empty State -->
+          <div class="empty-state" id="menu-empty-state" style="display: none;">
+            <div class="empty-icon"><i class="fa-solid fa-bowl-food"></i></div>
+            <h3>No dishes found</h3>
+            <p>We couldn't find any items matching your filters. Try resetting your search or dietary tags.</p>
+            <button class="btn btn-secondary" id="reset-filters-btn">Reset All Filters</button>
+          </div>
+        </div>
+
+        <!-- Sticky Desktop Cart Sidebar -->
+        <aside class="cart-sidebar" id="desktop-cart-sidebar">
+          <div class="cart-sidebar-card">
+            <div class="cart-card-header">
+              <div class="cart-title-wrap">
+                <i class="fa-solid fa-receipt"></i>
+                <h3>Current Order</h3>
+              </div>
+              <button class="btn-text-danger" id="clear-cart-btn" title="Clear all items">
+                <i class="fa-regular fa-trash-can"></i> Clear
+              </button>
+            </div>
+
+            <!-- Dining Details Configuration -->
+            <div class="order-context-box">
+              <div class="context-item">
+                <span class="context-label">Mode:</span>
+                <span class="context-value" id="cart-dining-mode-text">Dine-In</span>
+              </div>
+              <div class="context-item" id="table-select-row">
+                <label for="table-number-select" class="context-label">Table #:</label>
+                <select id="table-number-select" class="context-select">
+                  <option value="01">Table 01 (Patio)</option>
+                  <option value="02">Table 02 (Window)</option>
+                  <option value="03">Table 03 (Booth)</option>
+                  <option value="04" selected>Table 04 (Main Hall)</option>
+                  <option value="05">Table 05 (VIP Lounge)</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Cart Items List Container -->
+            <div class="cart-items-scrollable" id="cart-items-container">
+              <!-- Cart items injected via JavaScript -->
+            </div>
+
+            <!-- Cart Summary & Calculation -->
+            <div class="cart-summary-section">
+              <!-- Coupon / Promo Input -->
+              <div class="coupon-box">
+                <div class="coupon-input-group">
+                  <input type="text" id="coupon-input" placeholder="Promo code (AURAVIP15)" uppercase>
+                  <button class="btn btn-dark-sm" id="apply-coupon-btn">Apply</button>
+                </div>
+                <div class="coupon-status" id="coupon-status-msg" style="display: none;"></div>
+              </div>
+
+              <!-- Bill Breakdown -->
+              <div class="bill-breakdown">
+                <div class="bill-row">
+                  <span>Subtotal</span>
+                  <span id="bill-subtotal">$0.00</span>
+                </div>
+                <div class="bill-row discount-row" id="bill-discount-row" style="display: none;">
+                  <span>Discount (<span id="discount-percent-label">15%</span>)</span>
+                  <span id="bill-discount" class="text-success">-$0.00</span>
+                </div>
+                <div class="bill-row">
+                  <span>Tax (10% VAT)</span>
+                  <span id="bill-tax">$0.00</span>
+                </div>
+                <div class="bill-row">
+                  <span>Service Fee (5%)</span>
+                  <span id="bill-service">$0.00</span>
+                </div>
+                <div class="bill-divider"></div>
+                <div class="bill-row total-row">
+                  <span>Total Amount</span>
+                  <span class="total-price-tag" id="bill-total">$0.00</span>
+                </div>
+              </div>
+
+              <!-- Checkout Action -->
+              <button class="btn btn-primary btn-block checkout-submit-btn" id="proceed-checkout-btn" disabled>
+                <span>Proceed to Checkout</span>
+                <i class="fa-solid fa-arrow-right"></i>
+              </button>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- VIEW 2: LIVE ORDER TRACKING VIEW           -->
+    <!-- ========================================== -->
+    <section class="app-view" id="tracker-view" style="display: none;">
+      <div class="tracker-header">
+        <div>
+          <h2><i class="fa-solid fa-satellite-dish"></i> Live Kitchen Order Tracker</h2>
+          <p>Watch your order progress from prep to plate in real time.</p>
+        </div>
+        <button class="btn btn-secondary btn-sm" id="refresh-tracker-btn">
+          <i class="fa-solid fa-arrows-rotate"></i> Refresh Status
+        </button>
+      </div>
+
+      <div class="tracker-layout">
+        <!-- Active Orders List -->
+        <div class="tracker-orders-list" id="tracker-orders-container">
+          <!-- Populated dynamically -->
+        </div>
+
+        <!-- Order Timeline Detail Card -->
+        <div class="tracker-detail-panel" id="tracker-detail-panel">
+          <div class="empty-tracker-notice" id="tracker-placeholder">
+            <i class="fa-solid fa-clipboard-list"></i>
+            <h3>No Active Orders Selected</h3>
+            <p>Place an order from the menu or select an ongoing order from the list to view its live progress.</p>
+            <button class="btn btn-primary" id="go-to-menu-btn"><i class="fa-solid fa-utensils"></i> Browse Menu</button>
+          </div>
+          <div class="tracker-card-content" id="tracker-active-content" style="display:none;">
+            <!-- Active order details injected here -->
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- VIEW 3: KITCHEN DISPLAY SYSTEM (KDS)       -->
+    <!-- ========================================== -->
+    <section class="app-view" id="kitchen-view" style="display: none;">
+      <div class="kitchen-header">
+        <div class="kds-title-wrap">
+          <div class="kds-live-badge"><span class="pulse-dot"></span> LIVE KDS</div>
+          <h2>Kitchen Order Management Station</h2>
+        </div>
+        <div class="kds-stats-strip">
+          <div class="stat-pill"><span class="stat-num" id="kds-total-orders">0</span> Active Orders</div>
+          <div class="stat-pill"><span class="stat-num text-warning" id="kds-prep-orders">0</span> In Preparation</div>
+          <div class="stat-pill"><span class="stat-num text-success" id="kds-ready-orders">0</span> Ready to Serve</div>
+          <div class="stat-pill"><span class="stat-num text-accent" id="kds-total-revenue">$0.00</span> Today's Sales</div>
+        </div>
+      </div>
+
+      <!-- KDS Filter Controls -->
+      <div class="kds-filter-bar">
+        <div class="kds-tabs">
+          <button class="kds-tab-btn active" data-status="all">All Active (<span id="kds-tab-all-count">0</span>)</button>
+          <button class="kds-tab-btn" data-status="pending">New Orders (<span id="kds-tab-pending-count">0</span>)</button>
+          <button class="kds-tab-btn" data-status="cooking">Cooking (<span id="kds-tab-cooking-count">0</span>)</button>
+          <button class="kds-tab-btn" data-status="ready">Ready to Serve (<span id="kds-tab-ready-count">0</span>)</button>
+          <button class="kds-tab-btn" data-status="completed">Completed History</button>
+        </div>
+        <button class="btn btn-sm btn-secondary" id="kds-seed-demo-btn" title="Simulate incoming order for testing">
+          <i class="fa-solid fa-plus"></i> Simulate New Order
+        </button>
+      </div>
+
+      <!-- KDS Orders Grid -->
+      <div class="kds-grid" id="kds-orders-grid">
+        <!-- Live Kitchen Order Tickets injected here -->
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ========================================== -->
+  <!-- MODAL: DISH CUSTOMIZATION MODAL            -->
+  <!-- ========================================== -->
+  <div class="modal-backdrop" id="dish-modal" style="display: none;">
+    <div class="modal-dialog">
+      <button class="modal-close-btn" id="close-dish-modal-btn" aria-label="Close modal"><i class="fa-solid fa-xmark"></i></button>
+      
+      <div class="dish-modal-body" id="dish-modal-content">
+        <!-- Injected via app.js -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- MODAL: CHECKOUT & PAYMENT MODAL            -->
+  <!-- ========================================== -->
+  <div class="modal-backdrop" id="checkout-modal" style="display: none;">
+    <div class="modal-dialog modal-checkout">
+      <button class="modal-close-btn" id="close-checkout-modal-btn" aria-label="Close modal"><i class="fa-solid fa-xmark"></i></button>
+      
+      <div class="checkout-header">
+        <i class="fa-solid fa-cash-register modal-icon"></i>
+        <h3>Finalize Your Order</h3>
+        <p>Review your information and select a payment method.</p>
+      </div>
+
+      <form id="checkout-form" class="checkout-form">
+        <!-- Customer Details -->
+        <div class="form-section-title">1. Guest Information</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="cust-name">Full Name *</label>
+            <input type="text" id="cust-name" placeholder="e.g. Sokha Chan" required>
+          </div>
+          <div class="form-group">
+            <label for="cust-phone">Phone Number *</label>
+            <input type="tel" id="cust-phone" placeholder="e.g. 012 345 678" required>
+          </div>
+        </div>
+
+        <div class="form-row" id="delivery-address-group" style="display: none;">
+          <div class="form-group full-width">
+            <label for="cust-address">Takeaway / Delivery Note</label>
+            <input type="text" id="cust-address" placeholder="Pickup counter or delivery landmark...">
+          </div>
+        </div>
+
+        <!-- Payment Method Selection -->
+        <div class="form-section-title">2. Payment Method</div>
+        <div class="payment-options-grid">
+          <label class="payment-card active">
+            <input type="radio" name="payment-method" value="khqr" checked>
+            <div class="pay-content">
+              <i class="fa-solid fa-qrcode"></i>
+              <span>KHQR / Mobile Pay</span>
+            </div>
+          </label>
+          <label class="payment-card">
+            <input type="radio" name="payment-method" value="card">
+            <div class="pay-content">
+              <i class="fa-regular fa-credit-card"></i>
+              <span>Credit Card</span>
+            </div>
+          </label>
+          <label class="payment-card">
+            <input type="radio" name="payment-method" value="cash">
+            <div class="pay-content">
+              <i class="fa-solid fa-money-bill-wave"></i>
+              <span>Pay at Cashier</span>
+            </div>
+          </label>
+        </div>
+
+        <!-- Special Kitchen Notes -->
+        <div class="form-group full-width" style="margin-top: 1rem;">
+          <label for="order-special-notes">Special Kitchen Requests (Optional)</label>
+          <textarea id="order-special-notes" rows="2" placeholder="Allergies, extra napkins, serve dessert later..."></textarea>
+        </div>
+
+        <!-- Final Total Summary Box -->
+        <div class="checkout-summary-strip">
+          <div>
+            <span class="muted-label">Total to Pay:</span>
+            <div class="checkout-total-number" id="modal-checkout-total">$0.00</div>
+          </div>
+          <div class="checkout-item-count" id="modal-checkout-items-count">0 items</div>
+        </div>
+
+        <!-- Submit Button -->
+        <button type="submit" class="btn btn-primary btn-block btn-lg" id="confirm-place-order-btn">
+          <i class="fa-solid fa-circle-check"></i> Place Order Now
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- MODAL: ORDER SUCCESS & RECEIPT MODAL       -->
+  <!-- ========================================== -->
+  <div class="modal-backdrop" id="receipt-modal" style="display: none;">
+    <div class="modal-dialog modal-receipt">
+      <div class="receipt-success-badge">
+        <i class="fa-solid fa-check"></i>
+      </div>
+      <h2>Order Confirmed!</h2>
+      <p class="receipt-subtitle">Your order has been transmitted directly to our kitchen staff.</p>
+
+      <div class="receipt-paper" id="receipt-paper-content">
+        <!-- Receipt details dynamically injected -->
+      </div>
+
+      <div class="receipt-actions">
+        <button class="btn btn-primary btn-block" id="track-order-modal-btn">
+          <i class="fa-solid fa-satellite-dish"></i> Track Order Live
+        </button>
+        <button class="btn btn-secondary btn-block" id="print-receipt-btn">
+          <i class="fa-solid fa-print"></i> Print Receipt
+        </button>
+        <button class="btn btn-ghost btn-block" id="close-receipt-btn">Back to Menu</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div class="toast-container" id="toast-container" aria-live="polite"></div>
+
+  <!-- Mobile Cart Drawer Overlay -->
+  <div class="mobile-cart-backdrop" id="mobile-cart-drawer">
+    <div class="mobile-cart-content" id="mobile-cart-content">
+      <!-- Cloned or rendered on mobile -->
+    </div>
+  </div>
+
+  <!-- JavaScript Modules -->
+  <script src="js/data.js"></script>
+  <script src="js/cart.js"></script>
+  <script src="js/orders.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
