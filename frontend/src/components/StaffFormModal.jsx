@@ -101,40 +101,61 @@ export default function StaffFormModal({ isOpen, onClose, editingStaff = null, o
   };
 
   return (
-    <div className="modal-backdrop open" style={{ zIndex: 1050 }}>
+    <div
+      className="modal-backdrop"
+      style={{
+        zIndex: 1100,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '1rem',
+        overflowY: 'auto'
+      }}
+      onClick={onClose}
+    >
       <div
-        className="modal-box"
+        className="modal-dialog"
+        onClick={(e) => e.stopPropagation()}
         style={{
+          width: '100%',
           maxWidth: '560px',
-          width: '94%',
           maxHeight: '90vh',
           display: 'flex',
           flexDirection: 'column',
-          padding: '1.75rem 2rem'
+          background: 'var(--bg-surface)',
+          borderRadius: '20px',
+          border: '1px solid var(--border-color)',
+          boxShadow: '0 25px 60px rgba(0, 0, 0, 0.35)',
+          padding: '1.75rem 2rem',
+          position: 'relative',
+          overflow: 'hidden',
+          boxSizing: 'border-box'
         }}
       >
+        {/* Modal Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <div
               style={{
-                width: '40px',
-                height: '40px',
-                borderRadius: '10px',
-                background: 'var(--primary-light)',
-                color: 'var(--primary)',
+                width: '42px',
+                height: '42px',
+                borderRadius: '12px',
+                background: 'linear-gradient(135deg, var(--primary), var(--primary-hover))',
+                color: '#ffffff',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontSize: '1.2rem'
+                fontSize: '1.15rem',
+                boxShadow: '0 4px 12px var(--primary-glow)'
               }}
             >
               <i className="fa-solid fa-user-plus"></i>
             </div>
             <div>
-              <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800 }}>
+              <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main)' }}>
                 {editingStaff ? 'Edit Staff Profile' : 'Onboard New Staff Member'}
               </h3>
-              <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+              <p style={{ margin: '2px 0 0', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
                 Restaurant Human Resources &amp; Role Permissions
               </p>
             </div>
@@ -143,6 +164,7 @@ export default function StaffFormModal({ isOpen, onClose, editingStaff = null, o
             type="button"
             className="modal-close-btn"
             onClick={onClose}
+            aria-label="Close"
             style={{ position: 'static' }}
           >
             <i className="fa-solid fa-xmark"></i>
@@ -158,19 +180,34 @@ export default function StaffFormModal({ isOpen, onClose, editingStaff = null, o
               borderRadius: 'var(--radius-sm)',
               fontSize: '0.82rem',
               marginBottom: '1rem',
-              fontWeight: 600
+              fontWeight: 600,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem'
             }}
           >
-            <i className="fa-solid fa-triangle-exclamation" style={{ marginRight: '6px' }}></i>
-            {errorMsg}
+            <i className="fa-solid fa-triangle-exclamation"></i>
+            <span>{errorMsg}</span>
           </div>
         )}
 
-        <form onSubmit={handleSubmit} style={{ overflowY: 'auto', flex: 1, paddingRight: '4px' }}>
-          {/* Full Name & Username */}
-          <div className="form-row">
-            <div className="form-group" style={{ flex: 1 }}>
-              <label style={{ fontSize: '0.82rem', fontWeight: 700 }}>
+        {/* Scrollable Form Body without horizontal overflow */}
+        <form
+          onSubmit={handleSubmit}
+          style={{
+            overflowY: 'auto',
+            overflowX: 'hidden',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '1rem',
+            paddingRight: '2px',
+            boxSizing: 'border-box'
+          }}
+        >
+          {/* Row 1: Full Name & Username */}
+          <div className="form-row" style={{ display: 'flex', gap: '1rem', width: '100%', boxSizing: 'border-box' }}>
+            <div className="form-group" style={{ flex: 1, minWidth: 0 }}>
+              <label>
                 Full Name <span style={{ color: 'var(--danger)' }}>*</span>
               </label>
               <input
@@ -181,8 +218,8 @@ export default function StaffFormModal({ isOpen, onClose, editingStaff = null, o
                 required
               />
             </div>
-            <div className="form-group" style={{ flex: 1 }}>
-              <label style={{ fontSize: '0.82rem', fontWeight: 700 }}>
+            <div className="form-group" style={{ flex: 1, minWidth: 0 }}>
+              <label>
                 Login Username <span style={{ color: 'var(--danger)' }}>*</span>
               </label>
               <input
@@ -195,10 +232,10 @@ export default function StaffFormModal({ isOpen, onClose, editingStaff = null, o
             </div>
           </div>
 
-          {/* Password & Role */}
-          <div className="form-row">
-            <div className="form-group" style={{ flex: 1 }}>
-              <label style={{ fontSize: '0.82rem', fontWeight: 700 }}>
+          {/* Row 2: Password & Role */}
+          <div className="form-row" style={{ display: 'flex', gap: '1rem', width: '100%', boxSizing: 'border-box' }}>
+            <div className="form-group" style={{ flex: 1, minWidth: 0 }}>
+              <label>
                 Password {editingStaff ? '(leave blank to keep current)' : <span style={{ color: 'var(--danger)' }}>*</span>}
               </label>
               <input
@@ -209,8 +246,8 @@ export default function StaffFormModal({ isOpen, onClose, editingStaff = null, o
                 required={!editingStaff}
               />
             </div>
-            <div className="form-group" style={{ flex: 1 }}>
-              <label style={{ fontSize: '0.82rem', fontWeight: 700 }}>Access Role</label>
+            <div className="form-group" style={{ flex: 1, minWidth: 0 }}>
+              <label>Access Role</label>
               <select value={role} onChange={(e) => setRole(e.target.value)}>
                 <option value="staff">Staff (Front-of-House / Floor / POS)</option>
                 <option value="kitchen">Kitchen (Chefs / Back-of-House KDS)</option>
@@ -220,18 +257,18 @@ export default function StaffFormModal({ isOpen, onClose, editingStaff = null, o
             </div>
           </div>
 
-          {/* Department & Shift */}
-          <div className="form-row">
-            <div className="form-group" style={{ flex: 1 }}>
-              <label style={{ fontSize: '0.82rem', fontWeight: 700 }}>Department / Station</label>
+          {/* Row 3: Department & Shift */}
+          <div className="form-row" style={{ display: 'flex', gap: '1rem', width: '100%', boxSizing: 'border-box' }}>
+            <div className="form-group" style={{ flex: 1, minWidth: 0 }}>
+              <label>Department / Station</label>
               <select value={department} onChange={(e) => setDepartment(e.target.value)}>
                 {DEPARTMENTS.map((dept) => (
                   <option key={dept} value={dept}>{dept}</option>
                 ))}
               </select>
             </div>
-            <div className="form-group" style={{ flex: 1 }}>
-              <label style={{ fontSize: '0.82rem', fontWeight: 700 }}>Assigned Shift</label>
+            <div className="form-group" style={{ flex: 1, minWidth: 0 }}>
+              <label>Assigned Shift</label>
               <select value={shift} onChange={(e) => setShift(e.target.value)}>
                 {SHIFTS.map((s) => (
                   <option key={s} value={s}>{s}</option>
@@ -240,10 +277,10 @@ export default function StaffFormModal({ isOpen, onClose, editingStaff = null, o
             </div>
           </div>
 
-          {/* Contact: Phone & Email */}
-          <div className="form-row">
-            <div className="form-group" style={{ flex: 1 }}>
-              <label style={{ fontSize: '0.82rem', fontWeight: 700 }}>Phone Number</label>
+          {/* Row 4: Phone & Email */}
+          <div className="form-row" style={{ display: 'flex', gap: '1rem', width: '100%', boxSizing: 'border-box' }}>
+            <div className="form-group" style={{ flex: 1, minWidth: 0 }}>
+              <label>Phone Number</label>
               <input
                 type="text"
                 value={phone}
@@ -251,8 +288,8 @@ export default function StaffFormModal({ isOpen, onClose, editingStaff = null, o
                 placeholder="e.g. +855 12 345 678"
               />
             </div>
-            <div className="form-group" style={{ flex: 1 }}>
-              <label style={{ fontSize: '0.82rem', fontWeight: 700 }}>Email Address</label>
+            <div className="form-group" style={{ flex: 1, minWidth: 0 }}>
+              <label>Email Address</label>
               <input
                 type="email"
                 value={email}
@@ -262,10 +299,10 @@ export default function StaffFormModal({ isOpen, onClose, editingStaff = null, o
             </div>
           </div>
 
-          {/* Hourly Rate & Duty Status */}
-          <div className="form-row">
-            <div className="form-group" style={{ flex: 1 }}>
-              <label style={{ fontSize: '0.82rem', fontWeight: 700 }}>Hourly Rate ($ / hr)</label>
+          {/* Row 5: Hourly Rate & Duty Status */}
+          <div className="form-row" style={{ display: 'flex', gap: '1rem', width: '100%', boxSizing: 'border-box' }}>
+            <div className="form-group" style={{ flex: 1, minWidth: 0 }}>
+              <label>Hourly Rate ($ / hr)</label>
               <input
                 type="number"
                 step="0.25"
@@ -275,8 +312,8 @@ export default function StaffFormModal({ isOpen, onClose, editingStaff = null, o
                 placeholder="4.50"
               />
             </div>
-            <div className="form-group" style={{ flex: 1 }}>
-              <label style={{ fontSize: '0.82rem', fontWeight: 700 }}>Current Duty Status</label>
+            <div className="form-group" style={{ flex: 1, minWidth: 0 }}>
+              <label>Current Duty Status</label>
               <select value={dutyStatus} onChange={(e) => setDutyStatus(e.target.value)}>
                 <option value="on_duty">🟢 On Duty (Active / Clocked In)</option>
                 <option value="on_break">🟡 On Break</option>
@@ -291,21 +328,25 @@ export default function StaffFormModal({ isOpen, onClose, editingStaff = null, o
               display: 'flex',
               gap: '0.75rem',
               justifyContent: 'flex-end',
-              marginTop: '1.25rem',
+              marginTop: '0.5rem',
               paddingTop: '1rem',
-              borderTop: '1px solid var(--border-color)'
+              borderTop: '1px solid var(--border-color)',
+              width: '100%',
+              boxSizing: 'border-box'
             }}
           >
             <button
               type="button"
               className="btn btn-secondary"
               onClick={onClose}
+              style={{ padding: '0.65rem 1.25rem' }}
             >
               Cancel
             </button>
             <button
               type="submit"
               className="btn btn-primary"
+              style={{ padding: '0.65rem 1.35rem', fontWeight: 700 }}
             >
               <i className="fa-solid fa-check"></i>{' '}
               {editingStaff ? 'Save Changes' : 'Onboard Employee'}
@@ -316,4 +357,3 @@ export default function StaffFormModal({ isOpen, onClose, editingStaff = null, o
     </div>
   );
 }
-
