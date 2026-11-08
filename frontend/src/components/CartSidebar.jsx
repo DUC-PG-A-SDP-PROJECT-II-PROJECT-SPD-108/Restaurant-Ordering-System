@@ -40,17 +40,26 @@ export default function CartSidebar({ onOpenCheckout, isOpen, onCloseDrawer, onS
     <aside
       className={`cart-sidebar ${isOpen ? 'open' : ''}`}
       id="desktop-cart-sidebar"
+      onClick={(e) => {
+        if (e.target === e.currentTarget && onCloseDrawer) {
+          onCloseDrawer();
+        }
+      }}
     >
-      <div className="cart-sidebar-card">
+      <div className="cart-sidebar-card" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="cart-card-header">
           <div className="cart-title-wrap">
             <i className="fa-solid fa-receipt"></i>
             <h3>Current Order</h3>
+            {items.length > 0 && (
+              <span className="cart-item-count-pill">{summary.itemCount}</span>
+            )}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             {items.length > 0 && (
               <button
+                type="button"
                 className="btn-text-danger"
                 id="clear-cart-btn"
                 title="Clear all items"
@@ -61,10 +70,11 @@ export default function CartSidebar({ onOpenCheckout, isOpen, onCloseDrawer, onS
             )}
             {onCloseDrawer && (
               <button
-                className="modal-close-btn"
+                type="button"
+                className="modal-close-btn mobile-cart-close-btn"
                 onClick={onCloseDrawer}
-                style={{ position: 'static', transform: 'none' }}
                 title="Close Cart"
+                aria-label="Close Cart"
               >
                 <i className="fa-solid fa-xmark"></i>
               </button>

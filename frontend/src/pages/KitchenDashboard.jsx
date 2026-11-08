@@ -1,9 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useOrders } from '../context/OrderContext';
+import { playAudioAlert } from '../utils/audio';
+import OrderReceiptModal from '../components/OrderReceiptModal';
+
+function getElapsedMinutes(timestamp) {
+  try {
+    return Math.floor((Date.now() - new Date(timestamp).getTime()) / 60000);
+  } catch (e) {
+    return 0;
+  }
+}
 
 function formatTimeAgo(timestamp) {
   try {
-    const elapsedMinutes = Math.floor((Date.now() - new Date(timestamp).getTime()) / 60000);
+    const elapsedMinutes = getElapsedMinutes(timestamp);
     if (elapsedMinutes < 1) return 'Just now';
     if (elapsedMinutes === 1) return '1 min ago';
     if (elapsedMinutes < 60) return `${elapsedMinutes} mins ago`;
@@ -17,6 +27,14 @@ function formatTimeAgo(timestamp) {
 export default function KitchenDashboard({ onShowToast }) {
   const { orders, kdsStats, updateOrderStatus, simulateDemoOrder } = useOrders();
   const [filterStatus, setFilterStatus] = useState('all');
+  const [printingOrder, setPrintingOrder] = useState(null);
+  const [, setTick] = useState(0);
+
+  // Live timer tick every 15s to update ticket timers in real-time
+  useEffect(() => {
+    const timer = setInterval(() => setTick((t) => t + 1), 15000);
+    return () => clearInterval(timer);
+  }, []);
 
   const filteredOrders = orders.filter((o) => {
     if (filterStatus === 'all') return ['pending', 'cooking', 'ready'].includes(o.status);
@@ -26,6 +44,7 @@ export default function KitchenDashboard({ onShowToast }) {
 
   const handleSimulate = () => {
     const newOrd = simulateDemoOrder();
+    playAudioAlert('order-placed');
     if (onShowToast) {
       onShowToast(`Simulated new incoming order #${newOrd.id}!`, 'success');
     }
@@ -36,6 +55,11 @@ export default function KitchenDashboard({ onShowToast }) {
     if (onShowToast) {
       onShowToast(`Order #${orderId} moved to "${newStatus.toUpperCase()}"`, 'info');
     }
+  };
+
+  const handleTestSound = () => {
+    playAudioAlert('order-placed');
+    if (onShowToast) onShowToast('Tested KDS order chime alert', 'info');
   };
 
   return (
@@ -116,15 +140,25 @@ export default function KitchenDashboard({ onShowToast }) {
           </button>
         </div>
 
-        <button
-          type="button"
-          className="btn btn-sm btn-secondary"
-          id="kds-seed-demo-btn"
-          title="Simulate incoming order for testing"
-          onClick={handleSimulate}
-        >
-          <i className="fa-solid fa-plus"></i> Simulate New Order
-        </button>
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <button
+            type="button"
+            className="btn btn-sm btn-ghost"
+            onClick={handleTestSound}
+            title="Test audio chime alert"
+          >
+            <i className="fa-solid fa-bell"></i> Audio Chime
+          </button>
+          <button
+            type="button"
+            className="btn btn-sm btn-secondary"
+            id="kds-seed-demo-btn"
+            title="Simulate incoming order for testing"
+            onClick={handleSimulate}
+          >
+            <i className="fa-solid fa-plus"></i> Simulate New Order
+          </button>
+        </div>
       </div>
 
       {/* Orders Grid */}
@@ -161,8 +195,45 @@ export default function KitchenDashboard({ onShowToast }) {
                     {order.status.toUpperCase()}
                   </span>
                 </div>
-                <div className="kds-timer-pill">
-                  <i className="fa-solid fa-stopwatch"></i> {formatTimeAgo(order.timestamp)}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  {getElapsedMinutes(order.timestamp) >= 15 && order.status !== 'ready' && (
+                    <span
+                      style={{
+                        padding: '2px 6px',
+                        background: 'var(--danger)',
+                        color: '#fff',
+                        borderRadius: 'var(--radius-sm)',
+                        fontSize: '0.7rem',
+                        fontWeight: 800
+                      }}
+                      title="Prep time exceeded 15 minutes"
+                    >
+                      <i className="fa-solid fa-triangle-exclamation"></i> OVERDUE
+                    </span>
+                  )}
+                  <div className="kds-timer-pill">
+                    <i className="fa-solid fa-stopwatch"></i> {formatTimeAgo(order.timestamp)}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setPrintingOrder(order)}
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.15)',
+                      border: '1px solid rgba(255, 255, 255, 0.25)',
+                      borderRadius: '6px',
+                      padding: '2px 8px',
+                      color: 'inherit',
+                      cursor: 'pointer',
+                      fontSize: '0.72rem',
+                      fontWeight: 700,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.35rem'
+                    }}
+                    title="Print 80mm Kitchen Chit / Receipt"
+                  >
+                    <i className="fa-solid fa-print"></i> Print
+                  </button>
                 </div>
               </div>
 
@@ -259,6 +330,13 @@ export default function KitchenDashboard({ onShowToast }) {
           ))
         )}
       </div>
+
+      {/* Printable Receipt / Kitchen Ticket Modal */}
+      <OrderReceiptModal
+        order={printingOrder}
+        isOpen={Boolean(printingOrder)}
+        onClose={() => setPrintingOrder(null)}
+      />
     </section>
   );
 }

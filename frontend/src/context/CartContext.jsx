@@ -1,9 +1,18 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { PROMO_CODES } from '../data/mockData';
+import { getVouchers } from '../services/supabaseClient';
 
 const CartContext = createContext();
 
 const STORAGE_KEY = 'aura_bistro_cart';
+const VOUCHERS_STORAGE_KEY = 'aura_bistro_vouchers';
+
+const DEFAULT_VOUCHERS = [
+  { id: 1, code: 'AURAVIP15', discountPercent: 15, description: '15% Off VIP Dining Special', isActive: true, isFeatured: true },
+  { id: 2, code: 'WELCOME10', discountPercent: 10, description: '10% Off First-Time Guest', isActive: true, isFeatured: false },
+  { id: 3, code: 'CHEF25', discountPercent: 25, description: '25% Off Chef Masterclass Promo', isActive: true, isFeatured: false },
+  { id: 4, code: 'BISTRO20', discountPercent: 20, description: '20% Weekend Celebration Discount', isActive: true, isFeatured: false }
+];
 
 export function CartProvider({ children }) {
   const [items, setItems] = useState(() => {
@@ -19,8 +28,22 @@ export function CartProvider({ children }) {
     return [];
   });
 
+  const [isQrScanned, setIsQrScanned] = useState(() => {
+    try {
+      if (typeof window !== 'undefined') {
+        const urlParams = new URLSearchParams(window.location.search);
+        return Boolean(urlParams.get('table'));
+      }
+    } catch (e) {}
+    return false;
+  });
+
   const [diningMode, setDiningMode] = useState(() => {
     try {
+      if (typeof window !== 'undefined') {
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('table')) return 'dine-in';
+      }
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) return JSON.parse(saved).diningMode || 'dine-in';
     } catch (e) {}
@@ -29,6 +52,11 @@ export function CartProvider({ children }) {
 
   const [tableNumber, setTableNumber] = useState(() => {
     try {
+      if (typeof window !== 'undefined') {
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlTable = urlParams.get('table');
+        if (urlTable) return urlTable.padStart(2, '0');
+      }
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) return JSON.parse(saved).tableNumber || '04';
     } catch (e) {}
@@ -50,6 +78,77 @@ export function CartProvider({ children }) {
     } catch (e) {}
     return 0;
   });
+
+  const [vouchers, setVouchers] = useState(() => {
+    try {
+      const saved = localStorage.getItem(VOUCHERS_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {
+      console.warn('Unable to load cached vouchers:', e);
+    }
+    return DEFAULT_VOUCHERS;
+  });
+
+  // Sync vouchers to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem(VOUCHERS_STORAGE_KEY, JSON.stringify(vouchers));
+    } catch (e) {}
+  }, [vouchers]);
+
+  // Intra-tab and cross-tab listener for voucher updates from Admin
+  useEffect(() => {
+    const handleSync = () => {
+      try {
+        const saved = localStorage.getItem(VOUCHERS_STORAGE_KEY);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) setVouchers(parsed);
+        }
+      } catch (e) {}
+    };
+
+    window.addEventListener('storage', handleSync);
+    window.addEventListener('aura_vouchers_updated', handleSync);
+    return () => {
+      window.removeEventListener('storage', handleSync);
+      window.removeEventListener('aura_vouchers_updated', handleSync);
+    };
+  }, []);
+
+  // Load live vouchers from Supabase with polling
+  useEffect(() => {
+    let isMounted = true;
+    async function fetchVouchers() {
+      try {
+        const data = await getVouchers();
+        if (isMounted && data && Array.isArray(data) && data.length > 0) {
+          setVouchers(prev => {
+            // Merge with local featured flags if any
+            return data.map(rem => {
+              const localMatch = prev.find(p => p.id === rem.id || p.code === rem.code);
+              return {
+                ...rem,
+                isFeatured: rem.isFeatured !== undefined ? rem.isFeatured : (localMatch ? localMatch.isFeatured : rem.code === 'AURAVIP15')
+              };
+            });
+          });
+        }
+      } catch (err) {
+        console.warn('Unable to load live vouchers:', err);
+      }
+    }
+
+    fetchVouchers();
+    const interval = setInterval(fetchVouchers, 30000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, []);
 
   // Save to localStorage on change
   useEffect(() => {
@@ -134,6 +233,23 @@ export function CartProvider({ children }) {
       return { success: false, message: 'Please enter a voucher code.' };
     }
 
+    // 1. Check live vouchers from Supabase
+    const matchedVoucher = vouchers.find(v => (v.code || '').toUpperCase() === formatted);
+    if (matchedVoucher) {
+      if (!matchedVoucher.isActive) {
+        return { success: false, message: `Promo code "${formatted}" is currently inactive or disabled.` };
+      }
+      const disc = matchedVoucher.discountPercent;
+      setPromoCode(formatted);
+      setDiscountPercent(disc);
+      return {
+        success: true,
+        discountPercent: disc,
+        message: `Voucher "${formatted}" applied! (${disc}% OFF)`
+      };
+    }
+
+    // 2. Fallback to mock promo codes
     if (PROMO_CODES[formatted]) {
       const disc = PROMO_CODES[formatted].discountPercent;
       setPromoCode(formatted);
@@ -162,6 +278,11 @@ export function CartProvider({ children }) {
   const serviceFee = discountedSubtotal > 0 ? discountedSubtotal * 0.05 : 0;
   const total = discountedSubtotal + tax + serviceFee;
 
+  const activeVouchers = vouchers.filter(v => v.isActive);
+  const featuredVoucher =
+    activeVouchers.find(v => v.isFeatured) ||
+    (activeVouchers.length > 0 ? activeVouchers[0] : null);
+
   const summary = {
     itemCount,
     subtotal,
@@ -172,7 +293,8 @@ export function CartProvider({ children }) {
     serviceFee,
     total,
     diningMode,
-    tableNumber
+    tableNumber,
+    isQrScanned
   };
 
   return (
@@ -183,8 +305,12 @@ export function CartProvider({ children }) {
         setDiningMode,
         tableNumber,
         setTableNumber,
+        isQrScanned,
         promoCode,
         discountPercent,
+        vouchers,
+        setVouchers,
+        featuredVoucher,
         summary,
         addItem,
         updateQuantity,

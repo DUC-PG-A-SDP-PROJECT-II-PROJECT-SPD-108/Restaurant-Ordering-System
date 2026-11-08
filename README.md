@@ -33,21 +33,28 @@
 
 ### 👤 ក. សម្រាប់អតិថិជន (Customer Portal)
 * **Dual-Channel Mode Switcher:** ចុចប្តូរបានយ៉ាងងាយស្រួលរវាង `🍽️ ញ៉ាំនៅហាង (Dine-in)` និង `🛵 កម្ម៉ង់ដឹកជញ្ជូន (Online Delivery)`។
+* **Table QR Code Auto-Ordering (NEW):** ស្កេន QR កូដលើតុ (តាមរយៈ `?table=XX`) ប្រព័ន្ធនឹងចាក់សោលេខតុស្វ័យប្រវត្តិកាត់បន្ថយការភាន់ច្រឡំ។
+* **Dynamic KHQR Mobile Payment (NEW):** បង្កើត QR កូដបង់ប្រាក់ KHQR (Bakong) តាមចំនួនទឹកប្រាក់ជាក់ស្តែង ($ និង ៛) ដោយផ្ទាល់នៅពេល Checkout។
 * **Menu Browsing & Search:** មើលមុខម្ហូបតាមប្រភេទ (Appetizers, Mains, Drinks, Desserts) និងមានប្រអប់ស្វែងរក (Search Bar) លឿនរហ័ស។
 * **Dish Customization & Notes:** អាចបន្ថែមចំណាំពិសេសសម្រាប់ម្ហូបនីមួយៗ (ឧ. មិនដាក់ស្ករ, មិនសូវហិរ)។
-* **Smart Shopping Cart:** គណនាតម្លៃសរុប តម្លៃពន្ធ និងថ្លៃដឹកជញ្ជូនដោយស្វ័យប្រវត្តិ។
+* **Smart Shopping Cart:** គណនាតម្លៃសរុប តម្លៃពន្ធ និងថ្លៃដឹកជញ្ជូនដោយស្វ័យប្រវត្តិ ព្រមទាំងគាំទ្រ Promo Code។
 * **Live Order Tracking:** តាមដានស្ថានភាពម្ហូបផ្ទាល់ (Status Tracker: Pending ➔ Preparing ➔ Ready / Out for Delivery ➔ Completed)។
+* **Thermal POS Receipt (NEW):** មុខងារបោះពុម្ពវិក្កយបត្រតាមទំហំស្តង់ដារ 80mm POS Thermal Receipt។
 
 ### 👨‍🍳 ខ. សម្រាប់ផ្ទះបាយ (Kitchen Display System - KDS)
 * **Real-time Order Queue:** ទទួល Order ថ្មីៗភ្លាមៗដោយបែងចែកពណ៌ច្បាស់ៗតាមស្ថានភាព (Color-coded Badges)។
+* **Live Ticket Timers & Overdue Warnings (NEW):** នាឡិការាប់ម៉ោងចម្អិនលើ Ticket នីមួយៗ និងបង្ហាញសញ្ញាអាសន្ន `⚠️ OVERDUE` បើលើសពី 15 នាទី។
+* **Audio Chime Alerts (NEW):** បន្លឺសំឡេងកណ្ដឹងរោទ៍ស្វ័យប្រវត្តិ (Web Audio Synthesizer) នៅពេលមាន Order ថ្មីចូលមក។
 * **Visual Ticket Distinction:** បែងចែកច្បាស់ៗរវាង Order សម្រាប់តុ `Table #` និង Order ដឹកជញ្ជូន `🛵 Delivery`។
 * **One-Click Status Updater:** ប៊ូតុងផ្លាស់ប្តូរស្ថានភាពពី Pending ទៅ Preparing និង Mark as Ready ដោយចុចតែម្តង។
 
 ### 👑 គ. សម្រាប់អ្នកគ្រប់គ្រងហាង (Admin Management Dashboard)
-* **Staff Authentication:** ប្រព័ន្ធ Login សុវត្ថិភាពខ្ពស់ដោយប្រើ **JWT (JSON Web Token)** និងការ Hash ពាក្យសម្ងាត់ជាមួយ **bcryptjs**។
+* **Staff Authentication:** ប្រព័ន្ធ Login សុវត្ថិភាពខ្ពស់ដោយប្រើ **JWT (JSON Web Token)** និងការ Hash ពាក្យសម្ងាត់ជាមួយ **bcryptjs** (ជាមួយ Demo 1-Click Fast Login)។
 * **Menu Management (Full CRUD):** បន្ថែមមុខម្ហូបថ្មី កែប្រែតម្លៃ រូបភាព និងលុបមុខម្ហូបចេញពីប្រព័ន្ធ។
-* **Instant Stock Toggle:** បិទ/បើក ស្តុកម្ហូប (In-stock / Out-of-stock) ភ្លាមៗ ពេលម្ហូបអស់ពីផ្ទះបាយ។
-* **Sales Analytics & Summary:** របាយការណ៍សង្ខេបពីចំណូលសរុប (Total Revenue) និងចំនួន Order សរុបប្រចាំថ្ងៃ។
+* **Instant Stock Toggle (Real-Time Reactive):** បិទ/បើក ស្តុកម្ហូប (In-stock / Out-of-stock) ភ្លាមៗ ពេលម្ហូបអស់ពីផ្ទះបាយ ដែលនឹងបង្ហាញ "Sold Out" លើទំព័រភ្ញៀវភ្លាមៗ។
+* **Interactive Table Floor Plan (NEW):** ប្លង់តុអន្តរកម្មបង្ហាញស្ថានភាពតុតាមពណ៌ជាក់ស្តែង (ទំនេរ, កំពុងកុម្ម៉ង់, កំពុងចម្អិន, បានលើកម្ហូប) ស៊ីសង្វាក់ជាមួយផ្ទះបាយ។
+* **Table QR Placard Generator (NEW):** បង្កើត និងបោះពុម្ពស្លាក QR Code សម្រាប់ដាក់តាមតុនីមួយៗ (Tables 01-08)។
+* **Sales Analytics & Summary:** របាយការណ៍សង្ខេបពីចំណូលសរុប (Total Revenue) និងចំនួន Order សរុបប្រចាំថ្ងៃ ព្រមទាំងការបែងចែកតាម Channel។
 
 ---
 
@@ -282,6 +289,8 @@ npm run seed
 
 ### 🌐 អាសយដ្ឋានតំណភ្ជាប់នៃប្រព័ន្ធ (System Endpoints & URLs):
 - 🍽️ **Customer Menu & Ordering Portal:** [http://localhost:5173](http://localhost:5173)
+- 👑 **Bistro Admin Management Panel:** [http://localhost:5173/admin-panel-bistro](http://localhost:5173/admin-panel-bistro)
+- 🔐 **Bistro Admin Staff Login:** [http://localhost:5173/admin-panel-bistro-login](http://localhost:5173/admin-panel-bistro-login)
 - 📡 **Live Order Tracker:** ចុចលើ Tab *"Live Tracker"* ឬចូលតាមទំព័រវិក្កយបត្រ
 - 👨‍🍳 **Kitchen Display Station (KDS):** ចុចលើ Tab *"Kitchen KDS"* (គ្រប់គ្រង Order ផ្ទាល់)
 - ⚙️ **Backend REST API Health Check:** [http://localhost:5000/api/health](http://localhost:5000/api/health)
@@ -307,12 +316,14 @@ npm run seed
 
 ---
 
-## 🔑 ៨. គណនីគំរូសម្រាប់ធ្វើតេស្ត (Demo User Credentials)
+## 🔑 ៨. គណនីគំរូសម្រាប់ធ្វើតេស្ត (Staff & Admin Credentials)
 
 | តួនាទី (Role) | ឈ្មោះអ្នកប្រើប្រាស់ (Username) | ពាក្យសម្ងាត់ (Password) | សិទ្ធិប្រើប្រាស់ (Access Level) |
 |---|---|---|---|
-| **Admin (Manager)** | `admin` | `admin123` | គ្រប់គ្រងមុខម្ហូប (CRUD), មើលស្ថិតិចំណូល, គ្រប់គ្រង Order |
-| **Kitchen Staff** | `chef` | `chef123` | ផ្ទាំងផ្ទះបាយ (KDS), ប្តូរ Status Order, បិទ/បើក ស្តុកម្ហូប |
+| 👑 **Admin** | `admin` | `admin123` | Full Unrestricted Access (Menu CRUD, KDS, Discounts, Floor, Sales Reports) |
+| 👔 **Manager** | `manager` | `manager123` | Operations Management (Live Orders, Menus, Floor Plan, Vouchers, Reports) |
+| 🛎️ **Staff** | `staff` | `staff123` | Floor Service & Cashier (Table Floor Plan, Order Transactions, Reprint Receipts) |
+| 👨‍🍳 **Kitchen** | `kitchen` / `chef` | `kitchen123` / `chef123` | Kitchen Station (KDS Display, Cooking Queue, Timer Alarms, Mark Ready) |
 
 ---
 

@@ -211,6 +211,89 @@ app.get('/api/stats/summary', (req, res) => {
   });
 });
 
+// 9. Tables: Get Floor Status & QR Code links
+app.get('/api/tables', (req, res) => {
+  const defaultTables = [
+    { id: 1, tableNumber: 1, zone: 'Patio Terrace', capacity: 2, status: 'available' },
+    { id: 2, tableNumber: 2, zone: 'Window View', capacity: 4, status: 'available' },
+    { id: 3, tableNumber: 3, zone: 'Cozy Booth', capacity: 4, status: 'available' },
+    { id: 4, tableNumber: 4, zone: 'Main Dining Hall', capacity: 6, status: 'available' },
+    { id: 5, tableNumber: 5, zone: 'VIP Wine Lounge', capacity: 8, status: 'available' },
+    { id: 6, tableNumber: 6, zone: 'Main Dining Hall', capacity: 4, status: 'available' },
+    { id: 7, tableNumber: 7, zone: 'Patio Terrace', capacity: 2, status: 'available' },
+    { id: 8, tableNumber: 8, zone: 'Chef Counter', capacity: 2, status: 'available' }
+  ];
+  res.json(defaultTables);
+});
+
+// 10. Promo Code Verification
+app.post('/api/vouchers/verify', (req, res) => {
+  const { code } = req.body;
+  const PROMO_CODES = {
+    'AURAVIP15': { discountPercent: 15, description: '15% Off VIP Dining Special' },
+    'WELCOME10': { discountPercent: 10, description: '10% Off First-Time Guest' },
+    'CHEF25': { discountPercent: 25, description: '25% Off Chef Masterclass Promo' }
+  };
+  const promo = PROMO_CODES[code?.toUpperCase()];
+  if (promo) {
+    res.json({ valid: true, ...promo });
+  } else {
+    res.status(404).json({ valid: false, error: 'Invalid or expired voucher code' });
+  }
+});
+
+// 11. Bakong KHQR Gateway Integration (https://www.lorndavid.online/docs)
+const BAKONG_ACCOUNT_ID = process.env.BAKONG_ACCOUNT_ID || 'udom_vathna@bkrt';
+const BAKONG_GATEWAY_URL = 'https://lorndavid.online';
+
+app.post('/api/bakong/generate', async (req, res) => {
+  try {
+    const {
+      amount,
+      currency = 'USD',
+      billNumber = `INV-${Date.now().toString().slice(-6)}`,
+      merchantName = 'Aura Bistro',
+      accountId = BAKONG_ACCOUNT_ID
+    } = req.body;
+
+    if (!amount || Number(amount) <= 0) {
+      return res.status(400).json({ error: 'Valid payment amount required' });
+    }
+
+    const payload = {
+      accountId,
+      merchantName,
+      amount: Number(parseFloat(amount).toFixed(2)),
+      currency,
+      billNumber
+    };
+
+    const gatewayRes = await fetch(`${BAKONG_GATEWAY_URL}/api/v1/khqr/generate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await gatewayRes.json();
+    res.status(gatewayRes.status).json(data);
+  } catch (error) {
+    console.error('Bakong generate error:', error.message);
+    res.status(500).json({ error: 'Failed to generate KHQR from gateway', details: error.message });
+  }
+});
+
+app.get('/api/bakong/check/:md5', async (req, res) => {
+  try {
+    const { md5 } = req.params;
+    const gatewayRes = await fetch(`${BAKONG_GATEWAY_URL}/api/v1/check/${md5}`);
+    const data = await gatewayRes.json();
+    res.status(gatewayRes.status).json(data);
+  } catch (error) {
+    console.error('Bakong check error:', error.message);
+    res.status(500).json({ error: 'Failed to verify payment with gateway', details: error.message });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`🚀 ROS Backend Server running on http://localhost:${PORT}`);
   console.log(`📡 Health Check: http://localhost:${PORT}/api/health`);

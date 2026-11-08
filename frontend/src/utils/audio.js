@@ -30,6 +30,28 @@ export function playAudioAlert(type = 'click') {
       osc2.start();
       osc1.stop(ctx.currentTime + 0.6);
       osc2.stop(ctx.currentTime + 0.6);
+    } else if (type === 'bell-chime') {
+      // Hotel / Restaurant service desk brass bell chime (crisp high ping)
+      const osc1 = ctx.createOscillator();
+      const osc2 = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc1.type = 'sine';
+      osc2.type = 'triangle';
+      osc1.frequency.setValueAtTime(1318.51, ctx.currentTime); // E6
+      osc2.frequency.setValueAtTime(2637.02, ctx.currentTime); // E7 harmonic
+
+      gain.gain.setValueAtTime(0.35, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.85);
+
+      osc1.connect(gain);
+      osc2.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc1.start();
+      osc2.start();
+      osc1.stop(ctx.currentTime + 0.85);
+      osc2.stop(ctx.currentTime + 0.85);
     } else if (type === 'order-ready') {
       // High alert ping
       const osc = ctx.createOscillator();

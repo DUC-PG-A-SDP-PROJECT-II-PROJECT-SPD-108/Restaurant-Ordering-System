@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useOrders } from '../context/OrderContext';
 
 function formatTimeAgo(timestamp) {
@@ -18,6 +18,13 @@ export default function TrackOrder({ onGoToMenu, onShowToast }) {
   const { orders, activeOrderId, setActiveOrderId } = useOrders();
 
   const activeOrder = orders.find((o) => o.id === activeOrderId) || orders[0];
+  const selectedOrderRef = useRef(null);
+
+  useEffect(() => {
+    if (selectedOrderRef.current) {
+      selectedOrderRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }, [activeOrder?.id]);
 
   const statusMap = { pending: 1, cooking: 2, ready: 3, served: 4, cancelled: 0 };
   const currentStep = activeOrder ? statusMap[activeOrder.status] || 1 : 1;
@@ -56,6 +63,7 @@ export default function TrackOrder({ onGoToMenu, onShowToast }) {
             return (
               <div
                 key={ord.id}
+                ref={isSelected ? selectedOrderRef : null}
                 className={`tracker-order-card ${isSelected ? 'selected' : ''}`}
                 onClick={() => setActiveOrderId(ord.id)}
                 style={{ cursor: 'pointer' }}

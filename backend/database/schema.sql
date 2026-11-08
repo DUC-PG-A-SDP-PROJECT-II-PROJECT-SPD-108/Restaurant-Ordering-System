@@ -5,21 +5,26 @@
 
 PRAGMA foreign_keys = ON;
 
--- 1. Table Users (Admin & Kitchen Staff)
+-- 1. Table Users (Admin, Manager, Staff, Kitchen)
 CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     username TEXT NOT NULL UNIQUE,
     password TEXT NOT NULL,
-    role TEXT CHECK(role IN ('admin', 'kitchen')) NOT NULL DEFAULT 'kitchen',
+    role TEXT CHECK(role IN ('admin', 'manager', 'staff', 'kitchen')) NOT NULL DEFAULT 'staff',
+    name TEXT,
     createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
 -- 2. Table Categories
 CREATE TABLE IF NOT EXISTS categories (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id TEXT PRIMARY KEY,
     name TEXT NOT NULL UNIQUE,
-    icon TEXT DEFAULT 'Utensils',
-    description TEXT
+    icon TEXT DEFAULT 'fa-solid fa-utensils',
+    description TEXT,
+    display_order INTEGER DEFAULT 0,
+    count INTEGER DEFAULT 0,
+    createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
 -- 3. Table MenuItems
@@ -69,3 +74,32 @@ CREATE INDEX IF NOT EXISTS idx_menu_items_category ON menu_items(categoryId);
 CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
 CREATE INDEX IF NOT EXISTS idx_orders_orderType ON orders(orderType);
 CREATE INDEX IF NOT EXISTS idx_order_items_orderId ON order_items(orderId);
+
+-- 6. Table RestaurantTables (Floor Plan & Table QR Codes)
+CREATE TABLE IF NOT EXISTS restaurant_tables (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    tableNumber INTEGER NOT NULL UNIQUE,
+    zone TEXT DEFAULT 'Main Dining',
+    capacity INTEGER DEFAULT 4,
+    status TEXT CHECK(status IN ('available', 'occupied', 'reserved', 'cleaning')) DEFAULT 'available',
+    qrCodeUrl TEXT
+);
+
+-- 7. Table Vouchers (Promotions & Loyalty Discounts)
+CREATE TABLE IF NOT EXISTS vouchers (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    code TEXT NOT NULL UNIQUE,
+    discountPercent REAL NOT NULL CHECK(discountPercent > 0 AND discountPercent <= 100),
+    description TEXT,
+    isActive INTEGER NOT NULL DEFAULT 1,
+    createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Seed Initial Vouchers
+INSERT OR IGNORE INTO vouchers (code, discountPercent, description, isActive) VALUES
+('AURAVIP15', 15.0, '15% Off VIP Dining Special', 1),
+('WELCOME10', 10.0, '10% Off First-Time Guest', 1),
+('CHEF25', 25.0, '25% Off Chef Masterclass Promo', 1),
+('BISTRO20', 20.0, '20% Weekend Celebration Discount', 1);
+
+

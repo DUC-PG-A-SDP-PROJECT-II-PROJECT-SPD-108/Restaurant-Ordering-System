@@ -2,10 +2,17 @@ import React from 'react';
 import { useCart } from '../context/CartContext';
 
 export default function HeroBanner({ onShowToast }) {
-  const { applyPromoCode, diningMode, tableNumber } = useCart();
+  const { applyPromoCode, diningMode, tableNumber, featuredVoucher } = useCart();
+
+  const activeOffer = featuredVoucher || {
+    code: 'AURAVIP15',
+    discountPercent: 15,
+    description: '15% Off VIP Dining Special'
+  };
 
   const handleApplyVoucher = () => {
-    const res = applyPromoCode('AURAVIP15');
+    if (!activeOffer.code) return;
+    const res = applyPromoCode(activeOffer.code);
     if (onShowToast) {
       onShowToast(res.message, res.success ? 'success' : 'warning');
     }
@@ -44,30 +51,32 @@ export default function HeroBanner({ onShowToast }) {
         </div>
       </div>
 
-      <div className="hero-promo-card">
-        <div className="promo-badge">HOT OFFER</div>
-        <h3>Enjoy 15% Off Your Feast</h3>
-        <p>
-          Use voucher code{' '}
-          <code
-            className="promo-code-copy"
-            id="hero-voucher-code"
-            title="Click to copy & apply"
+      {featuredVoucher && (
+        <div className="hero-promo-card">
+          <div className="promo-badge">HOT OFFER</div>
+          <h3>Enjoy {activeOffer.discountPercent}% Off Your Feast</h3>
+          <p>
+            Use voucher code{' '}
+            <code
+              className="promo-code-copy"
+              id="hero-voucher-code"
+              title="Click to copy & apply"
+              onClick={handleApplyVoucher}
+              style={{ cursor: 'pointer' }}
+            >
+              {activeOffer.code}
+            </code>{' '}
+            at checkout!
+          </p>
+          <button
+            className="btn btn-sm btn-accent"
+            id="apply-hero-voucher-btn"
             onClick={handleApplyVoucher}
-            style={{ cursor: 'pointer' }}
           >
-            AURAVIP15
-          </code>{' '}
-          at checkout!
-        </p>
-        <button
-          className="btn btn-sm btn-accent"
-          id="apply-hero-voucher-btn"
-          onClick={handleApplyVoucher}
-        >
-          Apply To Cart
-        </button>
-      </div>
+            Apply To Cart
+          </button>
+        </div>
+      )}
     </div>
   );
 }

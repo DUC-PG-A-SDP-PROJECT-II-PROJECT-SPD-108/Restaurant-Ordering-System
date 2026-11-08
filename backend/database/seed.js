@@ -3,18 +3,24 @@ import db from './db.js';
 
 console.log('🌱 Seeding database...');
 
-// 1. Seed Users (admin, chef)
+// 1. Seed Users (admin, manager, staff, kitchen)
 const insertUser = db.prepare(`
-  INSERT OR IGNORE INTO users (username, password, role)
+  INSERT OR REPLACE INTO users (username, password, role)
   VALUES (@username, @password, @role)
 `);
 
 const adminHash = bcrypt.hashSync('admin123', 10);
+const managerHash = bcrypt.hashSync('manager123', 10);
+const staffHash = bcrypt.hashSync('staff123', 10);
+const kitchenHash = bcrypt.hashSync('kitchen123', 10);
 const chefHash = bcrypt.hashSync('chef123', 10);
 
 insertUser.run({ username: 'admin', password: adminHash, role: 'admin' });
+insertUser.run({ username: 'manager', password: managerHash, role: 'manager' });
+insertUser.run({ username: 'staff', password: staffHash, role: 'staff' });
+insertUser.run({ username: 'kitchen', password: kitchenHash, role: 'kitchen' });
 insertUser.run({ username: 'chef', password: chefHash, role: 'kitchen' });
-console.log('✅ Users seeded (admin/admin123, chef/chef123)');
+console.log('✅ Users seeded (admin, manager, staff, kitchen/chef)');
 
 // 2. Seed Categories
 const insertCategory = db.prepare(`
