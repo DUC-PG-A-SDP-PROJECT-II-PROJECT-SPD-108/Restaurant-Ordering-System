@@ -110,17 +110,12 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
     try {
       const saved = localStorage.getItem(AUTH_STORAGE_KEY);
-      if (saved === 'logged_out') return null;
-      if (saved) return JSON.parse(saved);
+      if (!saved || saved === 'logged_out') return null;
+      return JSON.parse(saved);
     } catch (e) {
       console.warn('Could not load auth from storage', e);
+      return null;
     }
-    // Default to demo admin for ease of testing in academic project
-    return {
-      username: 'admin',
-      role: 'admin',
-      name: 'System Administrator'
-    };
   });
 
   useEffect(() => {

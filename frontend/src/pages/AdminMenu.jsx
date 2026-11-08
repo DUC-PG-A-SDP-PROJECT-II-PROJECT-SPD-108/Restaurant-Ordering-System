@@ -459,7 +459,9 @@ export default function AdminMenu({ onShowToast, onGoToCustomerWeb, theme, toggl
   const takeoutCount = orders.filter(o => o.diningMode === 'takeout').length;
   const totalOrdersCount = orders.length;
 
-  const appOrigin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5173';
+  const appOrigin = typeof window !== 'undefined' && window.location.origin
+    ? window.location.origin
+    : 'https://bistro.mogonxa.site';
 
   const stationMeta = {
     dashboard: { title: 'Executive Overview Dashboard', icon: 'fa-solid fa-chart-pie' },
