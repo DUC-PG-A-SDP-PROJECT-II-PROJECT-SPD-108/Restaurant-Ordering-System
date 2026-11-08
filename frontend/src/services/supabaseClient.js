@@ -419,4 +419,85 @@ export async function deleteVoucher(id) {
   }
 }
 
+/**
+ * Fetch all staff & user accounts from Supabase
+ */
+export async function getStaffUsers() {
+  try {
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .order('id', { ascending: true });
+    if (error) throw error;
+    return data || [];
+  } catch (err) {
+    console.warn('Supabase getStaffUsers error:', err.message);
+    return null;
+  }
+}
+
+/**
+ * Create a new staff / user account in Supabase
+ */
+export async function createStaffUser(user) {
+  try {
+    const payload = {
+      username: user.username,
+      password: user.password || 'staff123',
+      role: user.role || 'staff',
+      name: user.name || user.username
+    };
+    const { data, error } = await supabase
+      .from('users')
+      .insert([payload])
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  } catch (err) {
+    console.warn('Supabase createStaffUser error:', err.message);
+    return null;
+  }
+}
+
+/**
+ * Update an existing staff / user account in Supabase
+ */
+export async function updateStaffUser(id, updates) {
+  try {
+    const payload = {
+      ...updates,
+      updated_at: new Date().toISOString()
+    };
+    const { data, error } = await supabase
+      .from('users')
+      .update(payload)
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  } catch (err) {
+    console.warn('Supabase updateStaffUser error:', err.message);
+    return null;
+  }
+}
+
+/**
+ * Delete a staff user account from Supabase
+ */
+export async function deleteStaffUser(id) {
+  try {
+    const { error } = await supabase
+      .from('users')
+      .delete()
+      .eq('id', id);
+    if (error) throw error;
+    return true;
+  } catch (err) {
+    console.warn('Supabase deleteStaffUser error:', err.message);
+    return false;
+  }
+}
+
 

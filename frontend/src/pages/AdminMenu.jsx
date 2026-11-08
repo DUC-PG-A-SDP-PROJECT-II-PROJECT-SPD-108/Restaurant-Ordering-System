@@ -8,10 +8,15 @@ import VoucherFormModal from '../components/VoucherFormModal';
 import OrderReceiptModal from '../components/OrderReceiptModal';
 import ConfirmDialog from '../components/ConfirmDialog';
 import KitchenDashboard from './KitchenDashboard';
+import StaffFormModal from '../components/StaffFormModal';
 import {
   getVouchers,
   updateVoucher as apiUpdateVoucher,
-  deleteVoucher as apiDeleteVoucher
+  deleteVoucher as apiDeleteVoucher,
+  getStaffUsers,
+  createStaffUser,
+  updateStaffUser,
+  deleteStaffUser
 } from '../services/supabaseClient';
 
 const RESTAURANT_TABLES = [
@@ -23,6 +28,93 @@ const RESTAURANT_TABLES = [
   { id: '06', name: 'Table 06', zone: 'Main Dining Hall', capacity: 4 },
   { id: '07', name: 'Table 07', zone: 'Patio Terrace', capacity: 2 },
   { id: '08', name: 'Table 08', zone: 'Chef Counter', capacity: 2 }
+];
+
+const SEED_STAFF = [
+  {
+    id: 'staff-1',
+    name: 'Sokha Vathna',
+    username: 'admin',
+    password: 'admin123',
+    role: 'admin',
+    phone: '+855 12 888 999',
+    email: 'admin@bistro.com',
+    department: 'Management & Operations',
+    shift: 'Full-Time Day (08:00 - 17:00)',
+    hourlyRate: 12.00,
+    dutyStatus: 'on_duty',
+    hireDate: '2025-01-15'
+  },
+  {
+    id: 'staff-2',
+    name: 'Chanthou Rithy',
+    username: 'manager',
+    password: 'manager123',
+    role: 'manager',
+    phone: '+855 77 123 456',
+    email: 'manager@bistro.com',
+    department: 'Management & Operations',
+    shift: 'Morning Shift (07:00 - 15:00)',
+    hourlyRate: 8.50,
+    dutyStatus: 'on_duty',
+    hireDate: '2025-03-01'
+  },
+  {
+    id: 'staff-3',
+    name: 'Chef Phalla Kiri',
+    username: 'kitchen',
+    password: 'kitchen123',
+    role: 'kitchen',
+    phone: '+855 98 456 789',
+    email: 'chef.kiri@bistro.com',
+    department: 'Kitchen & Culinary',
+    shift: 'Evening Shift (15:00 - 23:00)',
+    hourlyRate: 7.00,
+    dutyStatus: 'on_duty',
+    hireDate: '2025-04-10'
+  },
+  {
+    id: 'staff-4',
+    name: 'Sophea Nita',
+    username: 'staff',
+    password: 'staff123',
+    role: 'staff',
+    phone: '+855 86 654 321',
+    email: 'sophea.nita@bistro.com',
+    department: 'Front of House & Service',
+    shift: 'Morning Shift (07:00 - 15:00)',
+    hourlyRate: 4.50,
+    dutyStatus: 'on_duty',
+    hireDate: '2025-06-20'
+  },
+  {
+    id: 'staff-5',
+    name: 'Chenda Borin',
+    username: 'chef',
+    password: 'chef123',
+    role: 'kitchen',
+    phone: '+855 10 999 000',
+    email: 'borin.chef@bistro.com',
+    department: 'Kitchen & Culinary',
+    shift: 'Evening Shift (15:00 - 23:00)',
+    hourlyRate: 6.50,
+    dutyStatus: 'off_duty',
+    hireDate: '2025-07-05'
+  },
+  {
+    id: 'staff-6',
+    name: 'David Alex',
+    username: 'alex_bar',
+    password: 'alex123',
+    role: 'staff',
+    phone: '+855 15 222 333',
+    email: 'alex.bar@bistro.com',
+    department: 'Bar & Beverage',
+    shift: 'Evening Shift (15:00 - 23:00)',
+    hourlyRate: 5.50,
+    dutyStatus: 'on_duty',
+    hireDate: '2025-08-12'
+  }
 ];
 
 export default function AdminMenu({ onShowToast, onGoToCustomerWeb, theme, toggleTheme }) {
@@ -95,6 +187,139 @@ export default function AdminMenu({ onShowToast, onGoToCustomerWeb, theme, toggl
   const [isVoucherModalOpen, setIsVoucherModalOpen] = useState(false);
   const [editingVoucher, setEditingVoucher] = useState(null);
   const [voucherSearchQuery, setVoucherSearchQuery] = useState('');
+
+  // Staff & HR state (persisted in localStorage and synced with Supabase users)
+  const [staffList, setStaffList] = useState(() => {
+    try {
+      const saved = localStorage.getItem('aura_bistro_staff_roster');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {}
+    return SEED_STAFF;
+  });
+
+  const [isStaffModalOpen, setIsStaffModalOpen] = useState(false);
+  const [editingStaff, setEditingStaff] = useState(null);
+  const [staffSearchQuery, setStaffSearchQuery] = useState('');
+  const [staffRoleFilter, setStaffRoleFilter] = useState('all');
+  const [staffDutyFilter, setStaffDutyFilter] = useState('all');
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('aura_bistro_staff_roster', JSON.stringify(staffList));
+    } catch (e) {}
+  }, [staffList]);
+
+  // Load from Supabase on mount if available
+  useEffect(() => {
+    let isMounted = true;
+    getStaffUsers().then((remoteUsers) => {
+      if (isMounted && remoteUsers && remoteUsers.length > 0) {
+        setStaffList((prev) => {
+          const merged = [...prev];
+          remoteUsers.forEach((ru) => {
+            const idx = merged.findIndex((m) => m.username === ru.username);
+            if (idx >= 0) {
+              merged[idx] = {
+                ...merged[idx],
+                name: ru.name || merged[idx].name,
+                role: ru.role || merged[idx].role
+              };
+            } else {
+              merged.push({
+                id: `staff-${ru.id}`,
+                name: ru.name || ru.username,
+                username: ru.username,
+                password: ru.password || 'staff123',
+                role: ru.role || 'staff',
+                phone: 'N/A',
+                email: `${ru.username}@bistro.com`,
+                department:
+                  ru.role === 'kitchen'
+                    ? 'Kitchen & Culinary'
+                    : ru.role === 'admin' || ru.role === 'manager'
+                    ? 'Management & Operations'
+                    : 'Front of House & Service',
+                shift: 'Morning Shift (07:00 - 15:00)',
+                hourlyRate: 5.0,
+                dutyStatus: 'on_duty',
+                hireDate: ru.created_at ? ru.created_at.split('T')[0] : '2025-01-01'
+              });
+            }
+          });
+          return merged;
+        });
+      }
+    }).catch(() => {});
+    return () => { isMounted = false; };
+  }, []);
+
+  const handleSaveStaff = async (staffMember) => {
+    setStaffList((prev) => {
+      const idx = prev.findIndex((s) => s.id === staffMember.id);
+      if (idx >= 0) {
+        const updated = [...prev];
+        updated[idx] = staffMember;
+        return updated;
+      }
+      return [staffMember, ...prev];
+    });
+
+    try {
+      await createStaffUser({
+        username: staffMember.username,
+        password: staffMember.password,
+        role: staffMember.role,
+        name: staffMember.name
+      });
+    } catch (err) {}
+  };
+
+  const handleDeleteStaff = (staff) => {
+    if (staff.username === 'admin') {
+      openConfirmDialog({
+        title: 'Action Prohibited',
+        message: 'The primary System Administrator account cannot be deleted.',
+        isAlert: true,
+        icon: 'fa-solid fa-shield-halved',
+        confirmText: 'Understood',
+        confirmVariant: 'info'
+      });
+      return;
+    }
+
+    openConfirmDialog({
+      title: 'Remove Staff Member',
+      message: `Are you sure you want to remove "${staff.name}" (@${staff.username}) from the staff roster? They will no longer be able to log in.`,
+      confirmText: 'Yes, Remove Staff',
+      confirmVariant: 'danger',
+      icon: 'fa-solid fa-user-xmark',
+      onConfirm: async () => {
+        setStaffList((prev) => prev.filter((s) => s.id !== staff.id));
+        if (onShowToast) onShowToast(`Staff member "${staff.name}" removed.`, 'info');
+        try {
+          if (typeof staff.id === 'number') {
+            await deleteStaffUser(staff.id);
+          }
+        } catch (err) {}
+      }
+    });
+  };
+
+  const handleToggleDuty = (staff) => {
+    const nextStatus = staff.dutyStatus === 'on_duty' ? 'off_duty' : 'on_duty';
+    setStaffList((prev) =>
+      prev.map((s) => (s.id === staff.id ? { ...s, dutyStatus: nextStatus } : s))
+    );
+    if (onShowToast) {
+      onShowToast(
+        `${staff.name} is now ${nextStatus === 'on_duty' ? 'Clocked In (On Duty)' : 'Clocked Out (Off Duty)'}`,
+        'info'
+      );
+    }
+  };
 
   // Selected Order for Receipt Print
   const [selectedReceiptOrder, setSelectedReceiptOrder] = useState(null);
@@ -471,7 +696,8 @@ export default function AdminMenu({ onShowToast, onGoToCustomerWeb, theme, toggl
     floor: { title: 'Interactive Floor Plan & Tables', icon: 'fa-solid fa-map' },
     discounts: { title: 'Discounts & Promo Codes', icon: 'fa-solid fa-tags' },
     qr: { title: 'Table QR Placard Generator', icon: 'fa-solid fa-qrcode' },
-    analytics: { title: 'Sales & Business Analytics', icon: 'fa-solid fa-chart-line' }
+    analytics: { title: 'Sales & Business Analytics', icon: 'fa-solid fa-chart-line' },
+    staff_hr: { title: 'Staff & HR Management', icon: 'fa-solid fa-users-gear' }
   };
 
   return (
@@ -698,6 +924,31 @@ export default function AdminMenu({ onShowToast, onGoToCustomerWeb, theme, toggl
                   <i className="fa-solid fa-chart-line"></i>
                   <span>Sales Reports</span>
                 </div>
+              </button>
+            </li>
+          )}
+
+          {/* 9. STAFF & HR */}
+          {permissions?.allowedStations?.includes('staff_hr') && (
+            <li>
+              <button
+                type="button"
+                className={`admin-nav-btn ${activeStation === 'staff_hr' ? 'active' : ''}`}
+                onClick={() => {
+                  setActiveStation('staff_hr');
+                  setIsMobileSidebarOpen(false);
+                }}
+              >
+                <div className="admin-nav-btn-content">
+                  <i className="fa-solid fa-users-gear"></i>
+                  <span>Staff &amp; HR</span>
+                </div>
+                <span
+                  className="admin-nav-badge"
+                  style={{ background: 'var(--primary-light)', color: 'var(--primary)' }}
+                >
+                  {staffList.length}
+                </span>
               </button>
             </li>
           )}
@@ -3517,6 +3768,332 @@ export default function AdminMenu({ onShowToast, onGoToCustomerWeb, theme, toggl
               </div>
             );
           })()}
+
+          {/* =============================================================== */}
+          {/* 9. STAFF & HR WORKSTATION */}
+          {/* =============================================================== */}
+          {activeStation === 'staff_hr' && (() => {
+            const filteredStaff = staffList.filter((s) => {
+              const matchesSearch =
+                !staffSearchQuery.trim() ||
+                s.name.toLowerCase().includes(staffSearchQuery.toLowerCase()) ||
+                s.username.toLowerCase().includes(staffSearchQuery.toLowerCase()) ||
+                (s.phone && s.phone.includes(staffSearchQuery)) ||
+                (s.department && s.department.toLowerCase().includes(staffSearchQuery.toLowerCase()));
+
+              const matchesRole = staffRoleFilter === 'all' || s.role === staffRoleFilter;
+              const matchesDuty = staffDutyFilter === 'all' || s.dutyStatus === staffDutyFilter;
+
+              return matchesSearch && matchesRole && matchesDuty;
+            });
+
+            const onDutyCount = staffList.filter((s) => s.dutyStatus === 'on_duty').length;
+            const kitchenCount = staffList.filter((s) => s.role === 'kitchen').length;
+            const floorCount = staffList.filter((s) => s.role === 'staff').length;
+
+            const roleBadges = {
+              admin: { bg: 'rgba(245, 158, 11, 0.15)', color: '#d97706', label: 'ADMINISTRATOR', icon: 'fa-solid fa-crown' },
+              manager: { bg: 'rgba(59, 130, 246, 0.15)', color: '#2563eb', label: 'MANAGER', icon: 'fa-solid fa-user-tie' },
+              staff: { bg: 'rgba(16, 185, 129, 0.15)', color: '#059669', label: 'FLOOR SERVICE', icon: 'fa-solid fa-bell-concierge' },
+              kitchen: { bg: 'rgba(239, 68, 68, 0.15)', color: '#dc2626', label: 'KITCHEN CHEF', icon: 'fa-solid fa-kitchen-set' }
+            };
+
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                {/* Top Metrics Row */}
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))',
+                    gap: '1rem'
+                  }}
+                >
+                  <div className="card" style={{ padding: '1.25rem', border: '1px solid var(--border-color)', background: 'var(--bg-surface)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)' }}>TOTAL EMPLOYEES</span>
+                      <i className="fa-solid fa-users" style={{ color: 'var(--primary)' }}></i>
+                    </div>
+                    <div style={{ fontSize: '1.75rem', fontWeight: 900, marginTop: '0.5rem', color: 'var(--text-main)' }}>
+                      {staffList.length} <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)' }}>Members</span>
+                    </div>
+                  </div>
+
+                  <div className="card" style={{ padding: '1.25rem', border: '1px solid var(--border-color)', background: 'var(--bg-surface)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)' }}>ON DUTY NOW</span>
+                      <i className="fa-solid fa-clock" style={{ color: '#10b981' }}></i>
+                    </div>
+                    <div style={{ fontSize: '1.75rem', fontWeight: 900, marginTop: '0.5rem', color: '#10b981' }}>
+                      {onDutyCount} <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)' }}>Clocked In</span>
+                    </div>
+                  </div>
+
+                  <div className="card" style={{ padding: '1.25rem', border: '1px solid var(--border-color)', background: 'var(--bg-surface)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)' }}>KITCHEN &amp; BAR CREW</span>
+                      <i className="fa-solid fa-kitchen-set" style={{ color: '#ef4444' }}></i>
+                    </div>
+                    <div style={{ fontSize: '1.75rem', fontWeight: 900, marginTop: '0.5rem', color: '#ef4444' }}>
+                      {kitchenCount} <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)' }}>Chefs &amp; Cooks</span>
+                    </div>
+                  </div>
+
+                  <div className="card" style={{ padding: '1.25rem', border: '1px solid var(--border-color)', background: 'var(--bg-surface)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)' }}>FRONT OF HOUSE</span>
+                      <i className="fa-solid fa-bell-concierge" style={{ color: '#3b82f6' }}></i>
+                    </div>
+                    <div style={{ fontSize: '1.75rem', fontWeight: 900, marginTop: '0.5rem', color: '#3b82f6' }}>
+                      {floorCount} <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)' }}>Servers &amp; Cashiers</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Filter & Action Toolbar */}
+                <div
+                  style={{
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: '0.75rem',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    background: 'var(--bg-surface)',
+                    padding: '1rem 1.25rem',
+                    borderRadius: 'var(--radius-md)',
+                    border: '1px solid var(--border-color)'
+                  }}
+                >
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', flex: 1, minWidth: '280px' }}>
+                    <div style={{ position: 'relative', flex: 1, minWidth: '200px' }}>
+                      <i
+                        className="fa-solid fa-magnifying-glass"
+                        style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', fontSize: '0.85rem' }}
+                      ></i>
+                      <input
+                        type="text"
+                        value={staffSearchQuery}
+                        onChange={(e) => setStaffSearchQuery(e.target.value)}
+                        placeholder="Search employee name, username, phone..."
+                        style={{ width: '100%', paddingLeft: '34px', fontSize: '0.85rem' }}
+                      />
+                    </div>
+
+                    <select
+                      value={staffRoleFilter}
+                      onChange={(e) => setStaffRoleFilter(e.target.value)}
+                      style={{ fontSize: '0.85rem', minWidth: '140px' }}
+                    >
+                      <option value="all">All Roles</option>
+                      <option value="admin">Admin</option>
+                      <option value="manager">Manager</option>
+                      <option value="staff">Floor Staff</option>
+                      <option value="kitchen">Kitchen Chef</option>
+                    </select>
+
+                    <select
+                      value={staffDutyFilter}
+                      onChange={(e) => setStaffDutyFilter(e.target.value)}
+                      style={{ fontSize: '0.85rem', minWidth: '140px' }}
+                    >
+                      <option value="all">All Duty Statuses</option>
+                      <option value="on_duty">🟢 On Duty</option>
+                      <option value="off_duty">⚪ Off Duty</option>
+                      <option value="on_break">🟡 On Break</option>
+                    </select>
+                  </div>
+
+                  {permissions?.canManageStaff && (
+                    <button
+                      type="button"
+                      className="btn btn-primary"
+                      onClick={() => {
+                        setEditingStaff(null);
+                        setIsStaffModalOpen(true);
+                      }}
+                      style={{ gap: '0.5rem' }}
+                    >
+                      <i className="fa-solid fa-user-plus"></i> Add Staff Member
+                    </button>
+                  )}
+                </div>
+
+                {/* Staff Roster Table */}
+                <div
+                  style={{
+                    background: 'var(--bg-surface)',
+                    borderRadius: 'var(--radius-md)',
+                    border: '1px solid var(--border-color)',
+                    overflow: 'hidden'
+                  }}
+                >
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '820px' }}>
+                      <thead>
+                        <tr style={{ background: 'var(--bg-subtle)', borderBottom: '1px solid var(--border-color)', fontSize: '0.78rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+                          <th style={{ padding: '0.85rem 1.25rem' }}>Employee</th>
+                          <th style={{ padding: '0.85rem 1rem' }}>Role &amp; Permissions</th>
+                          <th style={{ padding: '0.85rem 1rem' }}>Department &amp; Shift</th>
+                          <th style={{ padding: '0.85rem 1rem' }}>Contact Info</th>
+                          <th style={{ padding: '0.85rem 1rem' }}>Hourly Rate</th>
+                          <th style={{ padding: '0.85rem 1rem' }}>Duty Status</th>
+                          <th style={{ padding: '0.85rem 1.25rem', textAlign: 'right' }}>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredStaff.length === 0 ? (
+                          <tr>
+                            <td colSpan={7} style={{ padding: '3rem 1rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+                              <i className="fa-solid fa-user-slash" style={{ fontSize: '2rem', marginBottom: '0.75rem', display: 'block', opacity: 0.5 }}></i>
+                              <strong>No staff members match the selected criteria.</strong>
+                            </td>
+                          </tr>
+                        ) : (
+                          filteredStaff.map((staff) => {
+                            const badge = roleBadges[staff.role] || roleBadges.staff;
+                            const isOnDuty = staff.dutyStatus === 'on_duty';
+                            const isOnBreak = staff.dutyStatus === 'on_break';
+
+                            return (
+                              <tr
+                                key={staff.id}
+                                style={{
+                                  borderBottom: '1px solid var(--border-color)',
+                                  transition: 'background 0.15s ease'
+                                }}
+                              >
+                                <td style={{ padding: '0.9rem 1.25rem' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                    <div
+                                      style={{
+                                        width: '38px',
+                                        height: '38px',
+                                        borderRadius: '50%',
+                                        background: badge.bg,
+                                        color: badge.color,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        fontWeight: 800,
+                                        fontSize: '0.9rem'
+                                      }}
+                                    >
+                                      {staff.name.charAt(0).toUpperCase()}
+                                    </div>
+                                    <div>
+                                      <div style={{ fontWeight: 800, color: 'var(--text-main)', fontSize: '0.9rem' }}>
+                                        {staff.name}
+                                      </div>
+                                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontFamily: 'monospace' }}>
+                                        @{staff.username}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </td>
+
+                                <td style={{ padding: '0.9rem 1rem' }}>
+                                  <span
+                                    style={{
+                                      fontSize: '0.72rem',
+                                      fontWeight: 800,
+                                      padding: '3px 8px',
+                                      borderRadius: '999px',
+                                      background: badge.bg,
+                                      color: badge.color,
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: '0.35rem'
+                                    }}
+                                  >
+                                    <i className={badge.icon}></i> {badge.label}
+                                  </span>
+                                </td>
+
+                                <td style={{ padding: '0.9rem 1rem' }}>
+                                  <div style={{ fontWeight: 600, fontSize: '0.82rem', color: 'var(--text-main)' }}>
+                                    {staff.department || 'Operations'}
+                                  </div>
+                                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                                    {staff.shift || 'Flexible'}
+                                  </div>
+                                </td>
+
+                                <td style={{ padding: '0.9rem 1rem' }}>
+                                  <div style={{ fontSize: '0.8rem', color: 'var(--text-main)' }}>
+                                    <i className="fa-solid fa-phone" style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginRight: '5px' }}></i>
+                                    {staff.phone || 'N/A'}
+                                  </div>
+                                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                                    <i className="fa-regular fa-envelope" style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginRight: '5px' }}></i>
+                                    {staff.email || 'N/A'}
+                                  </div>
+                                </td>
+
+                                <td style={{ padding: '0.9rem 1rem', fontWeight: 700, fontSize: '0.85rem', color: 'var(--primary)' }}>
+                                  ${Number(staff.hourlyRate || 0).toFixed(2)}/hr
+                                </td>
+
+                                <td style={{ padding: '0.9rem 1rem' }}>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleToggleDuty(staff)}
+                                    title="Click to toggle Clock In / Clock Out"
+                                    style={{
+                                      background: isOnDuty ? 'rgba(16, 185, 129, 0.15)' : isOnBreak ? 'rgba(245, 158, 11, 0.15)' : 'var(--bg-subtle)',
+                                      color: isOnDuty ? '#059669' : isOnBreak ? '#d97706' : 'var(--text-muted)',
+                                      border: '1px solid currentColor',
+                                      borderRadius: '999px',
+                                      padding: '3px 10px',
+                                      fontSize: '0.72rem',
+                                      fontWeight: 800,
+                                      cursor: 'pointer',
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: '0.35rem'
+                                    }}
+                                  >
+                                    <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: 'currentColor' }}></span>
+                                    {isOnDuty ? 'ON DUTY' : isOnBreak ? 'ON BREAK' : 'OFF DUTY'}
+                                  </button>
+                                </td>
+
+                                <td style={{ padding: '0.9rem 1.25rem', textAlign: 'right' }}>
+                                  <div style={{ display: 'inline-flex', gap: '0.4rem' }}>
+                                    <button
+                                      type="button"
+                                      className="btn btn-sm btn-secondary"
+                                      onClick={() => {
+                                        setEditingStaff(staff);
+                                        setIsStaffModalOpen(true);
+                                      }}
+                                      title="Edit Profile & Schedule"
+                                      style={{ padding: '4px 8px', fontSize: '0.75rem' }}
+                                    >
+                                      <i className="fa-solid fa-pen"></i> Edit
+                                    </button>
+                                    {permissions?.canManageStaff && staff.username !== 'admin' && (
+                                      <button
+                                        type="button"
+                                        className="btn btn-sm btn-ghost"
+                                        onClick={() => handleDeleteStaff(staff)}
+                                        title="Remove Staff"
+                                        style={{ padding: '4px 8px', fontSize: '0.75rem', color: 'var(--danger)' }}
+                                      >
+                                        <i className="fa-solid fa-trash-can"></i>
+                                      </button>
+                                    )}
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
             </>
           )}
         </main>
@@ -3553,6 +4130,18 @@ export default function AdminMenu({ onShowToast, onGoToCustomerWeb, theme, toggl
         isOpen={Boolean(selectedReceiptOrder)}
         onClose={() => setSelectedReceiptOrder(null)}
         isAdminView={true}
+      />
+
+      {/* Staff & HR Add/Edit Modal (Permission protected) */}
+      <StaffFormModal
+        isOpen={isStaffModalOpen && Boolean(permissions?.canManageStaff)}
+        onClose={() => {
+          setIsStaffModalOpen(false);
+          setEditingStaff(null);
+        }}
+        editingStaff={editingStaff}
+        onSave={handleSaveStaff}
+        onShowToast={onShowToast}
       />
 
       {/* Clean Custom Confirmation & Alert Dialog (Replaces native browser alert/confirm) */}

@@ -12,26 +12,28 @@ export const ROLE_PERMISSIONS = {
     title: 'System Administrator',
     badgeColor: '#f59e0b',
     icon: 'fa-solid fa-crown',
-    allowedStations: ['dashboard', 'orders', 'menu', 'categories', 'floor', 'discounts', 'qr', 'analytics'],
+    allowedStations: ['dashboard', 'orders', 'menu', 'categories', 'floor', 'discounts', 'qr', 'analytics', 'staff_hr'],
     canEditMenu: true,
     canEditCategories: true,
     canEditDiscounts: true,
     canViewAnalytics: true,
     canViewFinancials: true,
-    canResetDefaults: true
+    canResetDefaults: true,
+    canManageStaff: true
   },
   manager: {
     role: 'manager',
     title: 'Restaurant General Manager',
     badgeColor: '#3b82f6',
     icon: 'fa-solid fa-user-tie',
-    allowedStations: ['dashboard', 'orders', 'menu', 'categories', 'floor', 'discounts', 'qr', 'analytics'],
+    allowedStations: ['dashboard', 'orders', 'menu', 'categories', 'floor', 'discounts', 'qr', 'analytics', 'staff_hr'],
     canEditMenu: true,
     canEditCategories: true,
     canEditDiscounts: true,
     canViewAnalytics: true,
     canViewFinancials: true,
-    canResetDefaults: false
+    canResetDefaults: false,
+    canManageStaff: true
   },
   staff: {
     role: 'staff',
@@ -45,7 +47,8 @@ export const ROLE_PERMISSIONS = {
     canEditDiscounts: false,
     canViewAnalytics: false,
     canViewFinancials: false,
-    canResetDefaults: false
+    canResetDefaults: false,
+    canManageStaff: false
   },
   kitchen: {
     role: 'kitchen',
@@ -59,7 +62,8 @@ export const ROLE_PERMISSIONS = {
     canEditDiscounts: false,
     canViewAnalytics: false,
     canViewFinancials: false,
-    canResetDefaults: false
+    canResetDefaults: false,
+    canManageStaff: false
   }
 };
 
