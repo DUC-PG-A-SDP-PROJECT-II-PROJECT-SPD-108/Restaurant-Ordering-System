@@ -93,13 +93,20 @@ CREATE TABLE orders (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 7. CREATE TABLE: users (Staff / Admin authentication)
+-- 7. CREATE TABLE: users (Staff / Admin authentication & HR)
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,
     username TEXT NOT NULL UNIQUE,
     password TEXT NOT NULL,
     role TEXT CHECK (role IN ('admin', 'manager', 'staff', 'kitchen')) DEFAULT 'staff',
     name TEXT,
+    phone TEXT,
+    email TEXT,
+    department TEXT DEFAULT 'Front of House & Service',
+    shift TEXT DEFAULT 'Morning Shift (07:00 - 15:00)',
+    hourly_rate NUMERIC(10, 2) DEFAULT 4.50,
+    duty_status TEXT DEFAULT 'on_duty',
+    hire_date DATE DEFAULT CURRENT_DATE,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -152,6 +159,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE categories;
 ALTER PUBLICATION supabase_realtime ADD TABLE orders;
 ALTER PUBLICATION supabase_realtime ADD TABLE menu_items;
 ALTER PUBLICATION supabase_realtime ADD TABLE restaurant_tables;
+ALTER PUBLICATION supabase_realtime ADD TABLE vouchers;
 
 -- ============================================================================
 -- SEED DATA INSERTION
@@ -484,14 +492,22 @@ INSERT INTO orders (
 ON CONFLICT (id) DO NOTHING;
 
 -- F. Insert Staff & Admin Role Users
-INSERT INTO users (username, password, role, name) VALUES
-('admin',   'admin123',   'admin',   'System Administrator'),
-('manager', 'manager123', 'manager', 'Restaurant General Manager'),
-('staff',   'staff123',   'staff',   'Floor Service & Cashier Staff'),
-('kitchen', 'kitchen123', 'kitchen', 'Head Kitchen Chef'),
-('chef',    'chef123',    'kitchen', 'Executive Chef')
+INSERT INTO users (username, password, role, name, phone, email, department, shift, hourly_rate, duty_status, hire_date) VALUES
+('admin',     'admin123',   'admin',   'Sokha Vathna',     '+855 12 888 999', 'admin@bistro.com',       'Management & Operations',    'Full-Time Day (08:00 - 17:00)', 12.00, 'on_duty',  '2025-01-15'),
+('manager',   'manager123', 'manager', 'Chanthou Rithy',   '+855 77 123 456', 'manager@bistro.com',     'Management & Operations',    'Morning Shift (07:00 - 15:00)',  8.50, 'on_duty',  '2025-03-01'),
+('kitchen',   'kitchen123', 'kitchen', 'Chef Phalla Kiri', '+855 98 456 789', 'chef.kiri@bistro.com',   'Kitchen & Culinary',         'Evening Shift (15:00 - 23:00)',  7.00, 'on_duty',  '2025-04-10'),
+('staff',     'staff123',   'staff',   'Sophea Nita',      '+855 86 654 321', 'sophea.nita@bistro.com', 'Front of House & Service',   'Morning Shift (07:00 - 15:00)',  4.50, 'on_duty',  '2025-06-20'),
+('chef',      'chef123',    'kitchen', 'Chenda Borin',     '+855 10 999 000', 'borin.chef@bistro.com',  'Kitchen & Culinary',         'Evening Shift (15:00 - 23:00)',  6.50, 'off_duty', '2025-07-05'),
+('alex_bar',  'alex123',    'staff',   'David Alex',       '+855 15 222 333', 'alex.bar@bistro.com',    'Bar & Beverage',             'Evening Shift (15:00 - 23:00)',  5.50, 'on_duty',  '2025-08-12')
 ON CONFLICT (username) DO UPDATE SET
-    password = EXCLUDED.password,
-    role = EXCLUDED.role,
-    name = EXCLUDED.name;
+    password    = EXCLUDED.password,
+    role        = EXCLUDED.role,
+    name        = EXCLUDED.name,
+    phone       = EXCLUDED.phone,
+    email       = EXCLUDED.email,
+    department  = EXCLUDED.department,
+    shift       = EXCLUDED.shift,
+    hourly_rate = EXCLUDED.hourly_rate,
+    duty_status = EXCLUDED.duty_status,
+    hire_date   = EXCLUDED.hire_date;
 

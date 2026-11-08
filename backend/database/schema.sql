@@ -12,6 +12,13 @@ CREATE TABLE IF NOT EXISTS users (
     password TEXT NOT NULL,
     role TEXT CHECK(role IN ('admin', 'manager', 'staff', 'kitchen')) NOT NULL DEFAULT 'staff',
     name TEXT,
+    phone TEXT,
+    email TEXT,
+    department TEXT DEFAULT 'Front of House & Service',
+    shift TEXT DEFAULT 'Morning Shift (07:00 - 15:00)',
+    hourly_rate REAL DEFAULT 4.50,
+    duty_status TEXT DEFAULT 'on_duty',
+    hire_date DATE DEFAULT CURRENT_DATE,
     createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 

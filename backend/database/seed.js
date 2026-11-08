@@ -5,8 +5,8 @@ console.log('🌱 Seeding database...');
 
 // 1. Seed Users (admin, manager, staff, kitchen)
 const insertUser = db.prepare(`
-  INSERT OR REPLACE INTO users (username, password, role)
-  VALUES (@username, @password, @role)
+  INSERT OR REPLACE INTO users (username, password, role, name, phone, email, department, shift, hourly_rate, duty_status)
+  VALUES (@username, @password, @role, @name, @phone, @email, @department, @shift, @hourly_rate, @duty_status)
 `);
 
 const adminHash = bcrypt.hashSync('admin123', 10);
@@ -14,13 +14,81 @@ const managerHash = bcrypt.hashSync('manager123', 10);
 const staffHash = bcrypt.hashSync('staff123', 10);
 const kitchenHash = bcrypt.hashSync('kitchen123', 10);
 const chefHash = bcrypt.hashSync('chef123', 10);
+const alexHash = bcrypt.hashSync('alex123', 10);
 
-insertUser.run({ username: 'admin', password: adminHash, role: 'admin' });
-insertUser.run({ username: 'manager', password: managerHash, role: 'manager' });
-insertUser.run({ username: 'staff', password: staffHash, role: 'staff' });
-insertUser.run({ username: 'kitchen', password: kitchenHash, role: 'kitchen' });
-insertUser.run({ username: 'chef', password: chefHash, role: 'kitchen' });
-console.log('✅ Users seeded (admin, manager, staff, kitchen/chef)');
+insertUser.run({
+  username: 'admin',
+  password: adminHash,
+  role: 'admin',
+  name: 'Sokha Vathna',
+  phone: '+855 12 888 999',
+  email: 'admin@bistro.com',
+  department: 'Management & Operations',
+  shift: 'Full-Time Day (08:00 - 17:00)',
+  hourly_rate: 12.00,
+  duty_status: 'on_duty'
+});
+insertUser.run({
+  username: 'manager',
+  password: managerHash,
+  role: 'manager',
+  name: 'Chanthou Rithy',
+  phone: '+855 77 123 456',
+  email: 'manager@bistro.com',
+  department: 'Management & Operations',
+  shift: 'Morning Shift (07:00 - 15:00)',
+  hourly_rate: 8.50,
+  duty_status: 'on_duty'
+});
+insertUser.run({
+  username: 'staff',
+  password: staffHash,
+  role: 'staff',
+  name: 'Sophea Nita',
+  phone: '+855 86 654 321',
+  email: 'sophea.nita@bistro.com',
+  department: 'Front of House & Service',
+  shift: 'Morning Shift (07:00 - 15:00)',
+  hourly_rate: 4.50,
+  duty_status: 'on_duty'
+});
+insertUser.run({
+  username: 'kitchen',
+  password: kitchenHash,
+  role: 'kitchen',
+  name: 'Chef Phalla Kiri',
+  phone: '+855 98 456 789',
+  email: 'chef.kiri@bistro.com',
+  department: 'Kitchen & Culinary',
+  shift: 'Evening Shift (15:00 - 23:00)',
+  hourly_rate: 7.00,
+  duty_status: 'on_duty'
+});
+insertUser.run({
+  username: 'chef',
+  password: chefHash,
+  role: 'kitchen',
+  name: 'Chenda Borin',
+  phone: '+855 10 999 000',
+  email: 'borin.chef@bistro.com',
+  department: 'Kitchen & Culinary',
+  shift: 'Evening Shift (15:00 - 23:00)',
+  hourly_rate: 6.50,
+  duty_status: 'off_duty'
+});
+insertUser.run({
+  username: 'alex_bar',
+  password: alexHash,
+  role: 'staff',
+  name: 'David Alex',
+  phone: '+855 15 222 333',
+  email: 'alex.bar@bistro.com',
+  department: 'Bar & Beverage',
+  shift: 'Evening Shift (15:00 - 23:00)',
+  hourly_rate: 5.50,
+  duty_status: 'on_duty'
+});
+console.log('✅ Users & Staff HR seeded (admin, manager, staff, kitchen, chef, alex_bar)');
 
 // 2. Seed Categories
 const insertCategory = db.prepare(`

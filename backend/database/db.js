@@ -25,4 +25,16 @@ if (fs.existsSync(schemaPath)) {
   db.exec(schema);
 }
 
+// Automatically add missing columns if upgrading schema
+try {
+  const userColumns = db.prepare("PRAGMA table_info(users)").all().map(c => c.name);
+  if (!userColumns.includes('phone')) db.exec("ALTER TABLE users ADD COLUMN phone TEXT;");
+  if (!userColumns.includes('email')) db.exec("ALTER TABLE users ADD COLUMN email TEXT;");
+  if (!userColumns.includes('department')) db.exec("ALTER TABLE users ADD COLUMN department TEXT DEFAULT 'Front of House & Service';");
+  if (!userColumns.includes('shift')) db.exec("ALTER TABLE users ADD COLUMN shift TEXT DEFAULT 'Morning Shift (07:00 - 15:00)';");
+  if (!userColumns.includes('hourly_rate')) db.exec("ALTER TABLE users ADD COLUMN hourly_rate REAL DEFAULT 4.50;");
+  if (!userColumns.includes('duty_status')) db.exec("ALTER TABLE users ADD COLUMN duty_status TEXT DEFAULT 'on_duty';");
+  if (!userColumns.includes('hire_date')) db.exec("ALTER TABLE users ADD COLUMN hire_date DATE DEFAULT CURRENT_DATE;");
+} catch (e) {}
+
 export default db;
