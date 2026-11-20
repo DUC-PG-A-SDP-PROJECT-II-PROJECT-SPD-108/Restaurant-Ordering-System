@@ -90,6 +90,16 @@ export function MenuProvider({ children }) {
     loadDishesFromSupabase();
     loadCategoriesFromSupabase();
 
+    // Cross-tab and local listener for menu & categories sync
+    const handleMenuSync = (e) => {
+      if (!e.key || e.key === 'aura_bistro_menu_sync') {
+        loadDishesFromSupabase();
+        loadCategoriesFromSupabase();
+      }
+    };
+    window.addEventListener('storage', handleMenuSync);
+    window.addEventListener('aura_bistro_menu_sync', handleMenuSync);
+
     // Subscribe to realtime menu_items changes in Supabase
     const menuChannel = supabase
       .channel('schema-db-changes-menu')
@@ -137,6 +147,8 @@ export function MenuProvider({ children }) {
 
     return () => {
       isMounted = false;
+      window.removeEventListener('storage', handleMenuSync);
+      window.removeEventListener('aura_bistro_menu_sync', handleMenuSync);
       supabase.removeChannel(menuChannel);
       supabase.removeChannel(catChannel);
     };
@@ -170,6 +182,13 @@ export function MenuProvider({ children }) {
     }));
   }, [categoriesRaw, dishes]);
 
+  const notifyMenuChange = () => {
+    try {
+      localStorage.setItem('aura_bistro_menu_sync', Date.now().toString());
+      window.dispatchEvent(new CustomEvent('aura_bistro_menu_sync'));
+    } catch (e) {}
+  };
+
   // Add new category
   const addCategory = async (catData) => {
     let slug = catData.id
@@ -195,9 +214,10 @@ export function MenuProvider({ children }) {
     };
 
     setCategoriesRaw(prev => [...prev, newCategory]);
+    notifyMenuChange();
 
     // Persist to Supabase
-    createRemoteCategory(newCategory).catch(err => {
+    createRemoteCategory(newCategory).then(() => notifyMenuChange()).catch(err => {
       console.warn('Could not persist new category to Supabase:', err);
     });
 
@@ -209,9 +229,10 @@ export function MenuProvider({ children }) {
     setCategoriesRaw(prev =>
       prev.map(cat => (cat.id === id ? { ...cat, ...updatedFields } : cat))
     );
+    notifyMenuChange();
 
     // Persist to Supabase
-    updateRemoteCategory(id, updatedFields).catch(err => {
+    updateRemoteCategory(id, updatedFields).then(() => notifyMenuChange()).catch(err => {
       console.warn('Could not persist category update to Supabase:', err);
     });
   };
@@ -223,9 +244,10 @@ export function MenuProvider({ children }) {
     }
 
     setCategoriesRaw(prev => prev.filter(cat => cat.id !== id));
+    notifyMenuChange();
 
     // Persist to Supabase
-    deleteRemoteCategory(id).catch(err => {
+    deleteRemoteCategory(id).then(() => notifyMenuChange()).catch(err => {
       console.warn('Could not delete category from Supabase:', err);
     });
   };
@@ -234,6 +256,7 @@ export function MenuProvider({ children }) {
   const resetCategoriesToDefault = () => {
     setCategoriesRaw(MENU_CATEGORIES);
     localStorage.removeItem(CATEGORIES_STORAGE_KEY);
+    notifyMenuChange();
   };
 
   // Add new dish
@@ -251,9 +274,10 @@ export function MenuProvider({ children }) {
     };
 
     setDishes(prev => [newDish, ...prev]);
+    notifyMenuChange();
 
     // Async persist to Supabase
-    createMenuItem(newDish).catch(err => {
+    createMenuItem(newDish).then(() => notifyMenuChange()).catch(err => {
       console.warn('Could not persist new dish to Supabase:', err);
     });
 
@@ -265,9 +289,10 @@ export function MenuProvider({ children }) {
     setDishes(prev =>
       prev.map(dish => (dish.id === id ? { ...dish, ...updatedFields } : dish))
     );
+    notifyMenuChange();
 
     // Async persist to Supabase
-    updateMenuItem(id, updatedFields).catch(err => {
+    updateMenuItem(id, updatedFields).then(() => notifyMenuChange()).catch(err => {
       console.warn('Could not persist dish update to Supabase:', err);
     });
   };
@@ -275,9 +300,10 @@ export function MenuProvider({ children }) {
   // Delete dish
   const deleteDish = async (id) => {
     setDishes(prev => prev.filter(dish => dish.id !== id));
+    notifyMenuChange();
 
     // Async delete from Supabase
-    deleteMenuItem(id).catch(err => {
+    deleteMenuItem(id).then(() => notifyMenuChange()).catch(err => {
       console.warn('Could not delete dish from Supabase:', err);
     });
   };
@@ -298,9 +324,10 @@ export function MenuProvider({ children }) {
         return dish;
       })
     );
+    notifyMenuChange();
 
     // Async persist to Supabase
-    updateMenuItem(id, { inStock: newStatus }).catch(err => {
+    updateMenuItem(id, { inStock: newStatus }).then(() => notifyMenuChange()).catch(err => {
       console.warn('Could not persist stock toggle to Supabase:', err);
     });
   };
@@ -316,6 +343,7 @@ export function MenuProvider({ children }) {
     setCategoriesRaw(MENU_CATEGORIES);
     localStorage.removeItem(MENU_STORAGE_KEY);
     localStorage.removeItem(CATEGORIES_STORAGE_KEY);
+    notifyMenuChange();
   };
 
   return (

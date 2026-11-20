@@ -55,27 +55,40 @@ export function OrderProvider({ children }) {
     return orders.length > 0 ? orders[0].id : null;
   });
 
-  // Fetch live orders from Supabase on mount
+  // Fetch live orders from Backend & poll for real-time live sync
   useEffect(() => {
     let isMounted = true;
 
-    async function loadOrdersFromSupabase() {
+    async function loadOrdersFromBackend() {
       try {
         const remoteOrders = await getOrders();
-        if (isMounted && remoteOrders && remoteOrders.length > 0) {
+        if (isMounted && remoteOrders && Array.isArray(remoteOrders) && remoteOrders.length > 0) {
           setOrders(remoteOrders);
-          if (remoteOrders.length > 0) {
-            setActiveOrderId(remoteOrders[0].id);
-          }
+          setActiveOrderId(prev => {
+            if (!prev && remoteOrders.length > 0) return remoteOrders[0].id;
+            return prev;
+          });
         }
       } catch (err) {
-        console.warn('Failed to load orders from Supabase, using local fallback:', err);
+        console.warn('Failed to load orders from backend, using local fallback:', err);
       }
     }
 
-    loadOrdersFromSupabase();
+    loadOrdersFromBackend();
 
-    // Subscribe to realtime order notifications from Supabase
+    // Auto poll every 3.5 seconds to sync KDS & Customer in real-time
+    const pollInterval = setInterval(loadOrdersFromBackend, 3500);
+
+    // Cross-tab and same-tab instant synchronization
+    const handleSync = (e) => {
+      if (!e.key || e.key === 'aura_bistro_order_sync') {
+        loadOrdersFromBackend();
+      }
+    };
+    window.addEventListener('storage', handleSync);
+    window.addEventListener('bistro_order_updated', handleSync);
+
+    // Subscribe to realtime order notifications from Supabase if connected
     const channel = supabase
       .channel('schema-db-changes-orders')
       .on(
@@ -83,7 +96,7 @@ export function OrderProvider({ children }) {
         { event: '*', schema: 'public', table: 'orders' },
         (payload) => {
           if (payload.eventType === 'INSERT') {
-            loadOrdersFromSupabase();
+            loadOrdersFromBackend();
             playAudioAlert('order-placed');
           } else if (payload.eventType === 'UPDATE') {
             setOrders(prev =>
@@ -105,6 +118,9 @@ export function OrderProvider({ children }) {
 
     return () => {
       isMounted = false;
+      clearInterval(pollInterval);
+      window.removeEventListener('storage', handleSync);
+      window.removeEventListener('bistro_order_updated', handleSync);
       supabase.removeChannel(channel);
     };
   }, []);
@@ -118,7 +134,7 @@ export function OrderProvider({ children }) {
     }
   }, [orders]);
 
-  // Sync service requests to localStorage
+  // Sync service requests to localStorage & notify other tabs
   useEffect(() => {
     try {
       localStorage.setItem(SERVICE_REQUESTS_KEY, JSON.stringify(serviceRequests));
@@ -126,6 +142,26 @@ export function OrderProvider({ children }) {
       console.error('Failed to save service requests', e);
     }
   }, [serviceRequests]);
+
+  useEffect(() => {
+    const handleServiceSync = (e) => {
+      if (!e.key || e.key === SERVICE_REQUESTS_KEY || e.key === 'aura_bistro_service_sync') {
+        try {
+          const saved = localStorage.getItem(SERVICE_REQUESTS_KEY);
+          if (saved) {
+            const parsed = JSON.parse(saved);
+            if (Array.isArray(parsed)) setServiceRequests(parsed);
+          }
+        } catch (err) {}
+      }
+    };
+    window.addEventListener('storage', handleServiceSync);
+    window.addEventListener('bistro_service_updated', handleServiceSync);
+    return () => {
+      window.removeEventListener('storage', handleServiceSync);
+      window.removeEventListener('bistro_service_updated', handleServiceSync);
+    };
+  }, []);
 
   const requestService = ({ tableNumber = '01', serviceType = 'waiter', customMessage = '' }) => {
     const typeCatalog = {
@@ -147,15 +183,30 @@ export function OrderProvider({ children }) {
       requestedAt: new Date().toISOString()
     };
 
-    setServiceRequests(prev => [newRequest, ...prev.filter(r => !(r.tableNumber === newRequest.tableNumber && r.serviceType === serviceType && r.status === 'pending'))]);
+    setServiceRequests(prev => {
+      const updated = [newRequest, ...prev.filter(r => !(r.tableNumber === newRequest.tableNumber && r.serviceType === serviceType && r.status === 'pending'))];
+      try {
+        localStorage.setItem(SERVICE_REQUESTS_KEY, JSON.stringify(updated));
+        localStorage.setItem('aura_bistro_service_sync', Date.now().toString());
+        window.dispatchEvent(new CustomEvent('bistro_service_updated'));
+      } catch (e) {}
+      return updated;
+    });
+
     playAudioAlert('bell-chime');
     return newRequest;
   };
 
   const resolveServiceRequest = (requestId) => {
-    setServiceRequests(prev =>
-      prev.map(r => (r.id === requestId ? { ...r, status: 'resolved', resolvedAt: new Date().toISOString() } : r))
-    );
+    setServiceRequests(prev => {
+      const updated = prev.map(r => (r.id === requestId ? { ...r, status: 'resolved', resolvedAt: new Date().toISOString() } : r));
+      try {
+        localStorage.setItem(SERVICE_REQUESTS_KEY, JSON.stringify(updated));
+        localStorage.setItem('aura_bistro_service_sync', Date.now().toString());
+        window.dispatchEvent(new CustomEvent('bistro_service_updated'));
+      } catch (e) {}
+      return updated;
+    });
     playAudioAlert('click');
   };
 
@@ -211,33 +262,58 @@ export function OrderProvider({ children }) {
     setActiveOrderId(newOrder.id);
     playAudioAlert('order-placed');
 
-    // Async persist to Supabase
-    saveOrder(newOrder).catch(err => {
-      console.warn('Could not persist order to Supabase:', err);
+    // Notify other tabs immediately
+    try {
+      localStorage.setItem('aura_bistro_order_sync', Date.now().toString());
+      window.dispatchEvent(new CustomEvent('bistro_order_updated'));
+    } catch (e) {}
+
+    // Async persist to Backend
+    saveOrder(newOrder).then(() => {
+      try {
+        localStorage.setItem('aura_bistro_order_sync', Date.now().toString());
+        window.dispatchEvent(new CustomEvent('bistro_order_updated'));
+      } catch (e) {}
+    }).catch(err => {
+      console.warn('Could not persist order:', err);
     });
 
     return newOrder;
   };
 
   const updateOrderStatus = (orderId, newStatus) => {
+    let normStatus = newStatus;
+    if (newStatus === 'preparing') normStatus = 'cooking';
+    if (newStatus === 'completed' || newStatus === 'delivered') normStatus = 'served';
+
     setOrders(prev =>
       prev.map(order => {
-        if (order.id === orderId) {
-          return { ...order, status: newStatus };
+        if (order.id === orderId || order.orderCode === orderId) {
+          return { ...order, status: normStatus };
         }
         return order;
       })
     );
 
-    if (newStatus === 'ready') {
+    if (normStatus === 'ready') {
       playAudioAlert('order-ready');
     } else {
       playAudioAlert('click');
     }
 
-    // Async persist to Supabase
-    updateOrderStatusInSupabase(orderId, newStatus).catch(err => {
-      console.warn('Could not update order status in Supabase:', err);
+    try {
+      localStorage.setItem('aura_bistro_order_sync', Date.now().toString());
+      window.dispatchEvent(new CustomEvent('bistro_order_updated'));
+    } catch (e) {}
+
+    // Async persist to Backend
+    updateOrderStatusInSupabase(orderId, normStatus).then(() => {
+      try {
+        localStorage.setItem('aura_bistro_order_sync', Date.now().toString());
+        window.dispatchEvent(new CustomEvent('bistro_order_updated'));
+      } catch (e) {}
+    }).catch(err => {
+      console.warn('Could not update order status in backend:', err);
     });
   };
 
@@ -280,19 +356,29 @@ export function OrderProvider({ children }) {
     setOrders(prev => [simulatedOrder, ...prev]);
     playAudioAlert('order-placed');
 
-    // Async persist to Supabase
-    saveOrder(simulatedOrder).catch(err => {
-      console.warn('Could not persist simulated order to Supabase:', err);
+    try {
+      localStorage.setItem('aura_bistro_order_sync', Date.now().toString());
+      window.dispatchEvent(new CustomEvent('bistro_order_updated'));
+    } catch (e) {}
+
+    // Async persist to Backend
+    saveOrder(simulatedOrder).then(() => {
+      try {
+        localStorage.setItem('aura_bistro_order_sync', Date.now().toString());
+        window.dispatchEvent(new CustomEvent('bistro_order_updated'));
+      } catch (e) {}
+    }).catch(err => {
+      console.warn('Could not persist simulated order:', err);
     });
 
     return simulatedOrder;
   };
 
-  // Computations
-  const activeOrders = orders.filter(o => ['pending', 'cooking', 'ready'].includes(o.status));
-  const completedOrders = orders.filter(o => ['served', 'cancelled'].includes(o.status));
+  // Computations with normalized 4 stages: pending -> cooking -> ready -> served
+  const activeOrders = orders.filter(o => ['pending', 'cooking', 'preparing', 'ready'].includes(o.status));
+  const completedOrders = orders.filter(o => ['served', 'completed', 'delivered', 'cancelled'].includes(o.status));
   const pendingOrders = activeOrders.filter(o => o.status === 'pending');
-  const cookingOrders = activeOrders.filter(o => o.status === 'cooking');
+  const cookingOrders = activeOrders.filter(o => ['cooking', 'preparing'].includes(o.status));
   const readyOrders = activeOrders.filter(o => o.status === 'ready');
   const activeServiceRequests = serviceRequests.filter(r => r.status === 'pending');
 

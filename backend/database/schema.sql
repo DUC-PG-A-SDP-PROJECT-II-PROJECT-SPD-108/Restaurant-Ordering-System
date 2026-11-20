@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS users (
 
 -- 2. Table Categories
 CREATE TABLE IF NOT EXISTS categories (
-    id TEXT PRIMARY KEY,
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL UNIQUE,
     icon TEXT DEFAULT 'fa-solid fa-utensils',
     description TEXT,
@@ -42,25 +42,29 @@ CREATE TABLE IF NOT EXISTS menu_items (
     price REAL NOT NULL CHECK(price >= 0),
     image TEXT,
     isAvailable INTEGER NOT NULL DEFAULT 1,
+    isSpicy INTEGER DEFAULT 0,
+    isVegetarian INTEGER DEFAULT 0,
+    isChefPick INTEGER DEFAULT 0,
     categoryId INTEGER NOT NULL,
     createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (categoryId) REFERENCES categories(id) ON DELETE RESTRICT
 );
 
--- 4. Table Orders (Supports Dine-In & Online Delivery)
+-- 4. Table Orders (Supports Dine-In, Online Delivery & Takeaway)
 CREATE TABLE IF NOT EXISTS orders (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    orderType TEXT CHECK(orderType IN ('dine_in', 'delivery', 'takeaway')) NOT NULL DEFAULT 'dine_in',
-    tableNumber INTEGER,                                  -- Required for dine_in
-    customerName TEXT,                                    -- Required for delivery/takeaway
-    customerPhone TEXT,                                   -- Required for delivery/takeaway
-    deliveryAddress TEXT,                                 -- Required for delivery
+    orderCode TEXT,
+    orderType TEXT DEFAULT 'dine_in',
+    tableNumber TEXT,
+    customerName TEXT,
+    customerPhone TEXT,
+    deliveryAddress TEXT,
     deliveryFee REAL NOT NULL DEFAULT 0.0,
     customerNotes TEXT,
     totalAmount REAL NOT NULL DEFAULT 0.0,
-    paymentMethod TEXT CHECK(paymentMethod IN ('cash', 'khqr', 'cod')) NOT NULL DEFAULT 'cash',
-    paymentStatus TEXT CHECK(paymentStatus IN ('unpaid', 'paid')) NOT NULL DEFAULT 'unpaid',
-    status TEXT CHECK(status IN ('pending', 'preparing', 'ready', 'delivered', 'completed', 'cancelled')) NOT NULL DEFAULT 'pending',
+    paymentMethod TEXT DEFAULT 'cash',
+    paymentStatus TEXT DEFAULT 'unpaid',
+    status TEXT DEFAULT 'pending',
     createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
     updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
 );

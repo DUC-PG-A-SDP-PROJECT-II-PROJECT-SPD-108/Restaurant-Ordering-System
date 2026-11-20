@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '../services/supabaseClient';
+import { apiLogin } from '../services/api';
 
 const AuthContext = createContext();
 
@@ -142,51 +143,42 @@ export function AuthProvider({ children }) {
       return { success: false, message: 'Please enter both username and password.' };
     }
 
-    // 1. Try Supabase cloud database lookup first
+    // 1. Primary: Authenticate with Express Backend and retrieve official JWT token
     try {
-      if (supabase) {
-        const { data, error } = await supabase
-          .from('users')
-          .select('*')
-          .ilike('username', cleanUser)
-          .limit(1)
-          .maybeSingle();
-
-        if (data && !error) {
-          if (data.password === cleanPass || cleanPass === 'admin123' || cleanPass === '123456') {
-            const userData = {
-              id: data.id,
-              username: data.username,
-              role: (data.role || 'staff').toLowerCase(),
-              name: data.name || (data.role ? data.role.toUpperCase() : 'Staff Member')
-            };
-            setUser(userData);
-            return { success: true, user: userData };
-          }
-        }
+      const backendRes = await apiLogin(cleanUser, cleanPass);
+      if (backendRes && backendRes.token && backendRes.user) {
+        const fullUser = {
+          ...backendRes.user,
+          token: backendRes.token
+        };
+        setUser(fullUser);
+        try {
+          localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(fullUser));
+        } catch (e) {}
+        return { success: true, user: fullUser };
       }
     } catch (err) {
-      console.warn('Supabase auth query fell back to local credentials:', err);
+      console.warn('Backend authentication query fell back:', err);
     }
 
     // 2. Pre-configured 4-Role In-Memory / Local Credentials
     // Role 1: Admin
     if (cleanUser === 'admin' && (cleanPass === 'admin123' || cleanPass === 'admin' || cleanPass === '123456')) {
-      const userData = { username: 'admin', role: 'admin', name: 'System Administrator' };
+      const userData = { username: 'admin', role: 'admin', name: 'System Administrator', token: 'demo_admin_jwt_token' };
       setUser(userData);
       return { success: true, user: userData };
     }
 
     // Role 2: Manager
     if (cleanUser === 'manager' && (cleanPass === 'manager123' || cleanPass === 'manager' || cleanPass === '123456')) {
-      const userData = { username: 'manager', role: 'manager', name: 'Restaurant General Manager' };
+      const userData = { username: 'manager', role: 'manager', name: 'Restaurant General Manager', token: 'demo_manager_jwt_token' };
       setUser(userData);
       return { success: true, user: userData };
     }
 
     // Role 3: Staff (Floor & Cashier)
     if (cleanUser === 'staff' && (cleanPass === 'staff123' || cleanPass === 'staff' || cleanPass === '123456')) {
-      const userData = { username: 'staff', role: 'staff', name: 'Floor Service & Cashier Staff' };
+      const userData = { username: 'staff', role: 'staff', name: 'Floor Service & Cashier Staff', token: 'demo_staff_jwt_token' };
       setUser(userData);
       return { success: true, user: userData };
     }
@@ -196,7 +188,7 @@ export function AuthProvider({ children }) {
       (cleanUser === 'kitchen' || cleanUser === 'chef') &&
       (cleanPass === 'kitchen123' || cleanPass === 'chef123' || cleanPass === 'kitchen' || cleanPass === 'chef' || cleanPass === '123456')
     ) {
-      const userData = { username: 'kitchen', role: 'kitchen', name: 'Head Kitchen Chef' };
+      const userData = { username: 'kitchen', role: 'kitchen', name: 'Head Kitchen Chef', token: 'demo_kitchen_jwt_token' };
       setUser(userData);
       return { success: true, user: userData };
     }

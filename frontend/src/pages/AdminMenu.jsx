@@ -658,11 +658,12 @@ export default function AdminMenu({ onShowToast, onGoToCustomerWeb, theme, toggl
   });
 
   const getTableOrder = (tableNum) => {
+    const target = String(tableNum).padStart(2, '0');
     return orders.find(
       (o) =>
-        o.diningMode === 'dine-in' &&
-        o.tableNumber === tableNum &&
-        ['pending', 'cooking', 'ready'].includes(o.status)
+        (o.diningMode === 'dine-in' || o.diningMode === 'dine_in') &&
+        String(o.tableNumber).padStart(2, '0') === target &&
+        ['pending', 'cooking', 'preparing', 'ready'].includes(o.status)
     );
   };
 

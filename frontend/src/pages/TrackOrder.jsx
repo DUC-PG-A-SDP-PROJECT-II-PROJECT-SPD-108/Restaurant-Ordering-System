@@ -26,7 +26,16 @@ export default function TrackOrder({ onGoToMenu, onShowToast }) {
     }
   }, [activeOrder?.id]);
 
-  const statusMap = { pending: 1, cooking: 2, ready: 3, served: 4, cancelled: 0 };
+  const statusMap = {
+    pending: 1,
+    cooking: 2,
+    preparing: 2,
+    ready: 3,
+    served: 4,
+    completed: 4,
+    delivered: 4,
+    cancelled: 0
+  };
   const currentStep = activeOrder ? statusMap[activeOrder.status] || 1 : 1;
   const progressPercent = Math.min(100, Math.max(0, ((currentStep - 1) / 3) * 100));
 

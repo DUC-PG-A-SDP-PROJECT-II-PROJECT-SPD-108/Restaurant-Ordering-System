@@ -1,0 +1,18 @@
+{
+  "name": "restaurant-ordering-system",
+  "version": "1.0.0",
+  "description": "Aura Bistro - Modern Full-Stack Restaurant Ordering System (ROS)",
+  "type": "module",
+  "scripts": {
+    "start": "run.bat",
+    "test": "node tests/run-all-tests.js",
+    "test:auth": "node tests/01_auth.test.js",
+    "test:categories": "node tests/02_categories.test.js",
+    "test:menu": "node tests/03_menu_dishes.test.js",
+    "test:orders": "node tests/04_orders_kds.test.js",
+    "test:vouchers": "node tests/05_vouchers.test.js",
+    "test:staff": "node tests/06_staff_hr.test.js",
+    "test:stats": "node tests/07_stats_analytics.test.js",
+    "test:e2e": "node tests/08_e2e_workflow.test.js"
+  }
+}
