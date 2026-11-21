@@ -37,8 +37,9 @@ export default function KitchenDashboard({ onShowToast }) {
   }, []);
 
   const filteredOrders = orders.filter((o) => {
-    if (filterStatus === 'all') return ['pending', 'cooking', 'ready'].includes(o.status);
-    if (filterStatus === 'completed') return ['served', 'cancelled'].includes(o.status);
+    if (filterStatus === 'all') return ['pending', 'cooking', 'preparing', 'ready'].includes(o.status);
+    if (filterStatus === 'cooking') return ['cooking', 'preparing'].includes(o.status);
+    if (filterStatus === 'completed') return ['served', 'completed', 'delivered', 'cancelled'].includes(o.status);
     return o.status === filterStatus;
   });
 

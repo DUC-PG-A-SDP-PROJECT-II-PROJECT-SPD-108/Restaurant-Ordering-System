@@ -1,11 +1,10 @@
 /**
- * AURA BISTRO - BAKONG KHQR PAYMENT SERVICE
- * Gateway: https://www.lorndavid.online/docs
- * Official National Bank of Cambodia (NBC) EMVCo KHQR Generator & MD5 Settlement Poller
+ * AURA BISTRO - BAKONG KHQR PAYMENT SERVICE (Backend-Mediated Security Architecture)
+ * Gateway Proxied via Backend Express API: /api/bakong/generate and /api/bakong/check/:md5
  */
+import api from './api';
 
 export const BAKONG_CONFIG = {
-  BASE_URL: import.meta.env?.VITE_BAKONG_GATEWAY_URL || 'https://lorndavid.online',
   ACCOUNT_ID: import.meta.env?.VITE_BAKONG_ACCOUNT_ID || 'udom_vathna@bkrt',
   MERCHANT_NAME: import.meta.env?.VITE_BAKONG_MERCHANT_NAME || 'Aura Bistro',
   DEFAULT_CURRENCY: 'USD',
@@ -15,13 +14,7 @@ export const BAKONG_CONFIG = {
 };
 
 /**
- * Generate Dynamic EMVCo KHQR from Lorndavid Bakong Gateway
- * @param {Object} params
- * @param {number} params.amount - Amount to pay
- * @param {string} [params.currency='USD'] - 'USD' or 'KHR'
- * @param {string} [params.billNumber] - Unique invoice identifier
- * @param {string} [params.accountId] - Bakong Account ID (e.g. udom_vathna@bkrt)
- * @param {string} [params.merchantName] - Store name
+ * Generate Dynamic EMVCo KHQR via Backend REST API
  */
 export async function generateBakongKhqr({
   amount,
@@ -42,20 +35,10 @@ export async function generateBakongKhqr({
   };
 
   try {
-    const response = await fetch(`${BAKONG_CONFIG.BASE_URL}/api/v1/khqr/generate`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(payload)
-    });
+    // Call backend API endpoint rather than external third-party directly
+    const response = await api.post('/bakong/generate', payload);
+    const data = response.data;
 
-    if (!response.ok) {
-      const errText = await response.text();
-      throw new Error(`Gateway returned HTTP ${response.status}: ${errText}`);
-    }
-
-    const data = await response.json();
     return {
       success: true,
       md5: data.md5,
@@ -69,7 +52,7 @@ export async function generateBakongKhqr({
       merchantName: data.merchantName || merchantName
     };
   } catch (error) {
-    console.error('Failed to generate Bakong KHQR:', error);
+    console.warn('Backend Bakong generate failed, employing graceful fallback QR:', error?.message);
     // Return graceful fallback QR so checkout is never blocked
     return {
       success: false,
@@ -92,10 +75,9 @@ export async function generateBakongKhqr({
 }
 
 /**
- * Check payment settlement status on NBC Ledger via MD5
+ * Check payment settlement status on NBC Ledger via Backend API
  * responseCode === 0 : Paid / Confirmed
  * responseCode === 1 : Unpaid / Pending
- * @param {string} md5 - MD5 hash returned during generation
  */
 export async function checkBakongPayment(md5) {
   if (!md5 || md5.startsWith('fallback-')) {
@@ -103,18 +85,8 @@ export async function checkBakongPayment(md5) {
   }
 
   try {
-    const response = await fetch(`${BAKONG_CONFIG.BASE_URL}/api/v1/check/${md5}`, {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json'
-      }
-    });
-
-    if (!response.ok) {
-      return { isPaid: false, responseCode: response.status, message: 'Check request error' };
-    }
-
-    const resData = await response.json();
+    const response = await api.get(`/bakong/check/${md5}`);
+    const resData = response.data;
     const isPaid = resData.responseCode === 0;
 
     return {
@@ -125,7 +97,7 @@ export async function checkBakongPayment(md5) {
       hash: resData.data?.hash || resData.hash || md5
     };
   } catch (error) {
-    console.warn('Bakong check error:', error.message);
+    console.warn('Bakong check error via backend:', error.message);
     return { isPaid: false, responseCode: 500, message: error.message };
   }
 }
