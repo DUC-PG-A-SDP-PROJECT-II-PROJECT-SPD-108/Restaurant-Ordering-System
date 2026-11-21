@@ -3,14 +3,20 @@ import {
   getVouchers,
   createVoucher,
   updateVoucher,
-  deleteVoucher
+  deleteVoucher,
+  verifyVoucher
 } from '../controllers/voucherController.js';
 import { verifyToken, requireRole } from '../middlewares/authMiddleware.js';
+import { createRateLimiter } from '../middlewares/rateLimiter.js';
 
 const router = Router();
 
-// Public: Fetch vouchers (used by Customer Banner & Checkout)
+// Rate limiter for promo verification: 40 requests/minute per IP
+const voucherRateLimiter = createRateLimiter(40, 60000, 'Too many promo verification attempts. Please wait 1 minute.');
+
+// Public: Fetch vouchers & Verify promo code
 router.get('/', getVouchers);
+router.post('/verify', voucherRateLimiter, verifyVoucher);
 
 // Protected: Admin only CRUD
 router.post('/', verifyToken, requireRole('admin', 'manager'), createVoucher);

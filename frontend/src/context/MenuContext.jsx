@@ -172,14 +172,37 @@ export function MenuProvider({ children }) {
     }
   }, [categoriesRaw]);
 
+  // Helper to match a dish with a category flexibly (by slug id, name, or database id)
+  const isDishInCategory = (dish, cat) => {
+    if (!dish || !cat) return false;
+    if (cat.id === 'all') return true;
+    const catSlug = String(cat.id || '').toLowerCase();
+    const catName = String(cat.name || '').toLowerCase();
+    const dishCat = String(dish.category || '').toLowerCase();
+    const dishCatName = String(dish.categoryName || '').toLowerCase();
+
+    return (
+      dishCat === catSlug ||
+      dishCat === catName ||
+      dishCatName === catName ||
+      dishCatName === catSlug ||
+      (cat.dbId && dish.categoryId === cat.dbId) ||
+      (cat.id && String(dish.categoryId) === String(cat.id))
+    );
+  };
+
   // Decorate categories with dynamic live dish counts
   const categories = useMemo(() => {
-    return categoriesRaw.map(cat => ({
-      ...cat,
-      count: cat.id === 'all'
-        ? dishes.length
-        : dishes.filter(d => d.category === cat.id).length
-    }));
+    return categoriesRaw.map(cat => {
+      if (cat.id === 'all') {
+        return { ...cat, count: dishes.length };
+      }
+      const matched = dishes.filter(d => isDishInCategory(d, cat));
+      return {
+        ...cat,
+        count: matched.length > 0 ? matched.length : (Number(cat.count) || 0)
+      };
+    });
   }, [categoriesRaw, dishes]);
 
   const notifyMenuChange = () => {

@@ -1,4 +1,5 @@
 import db from '../../database/db.js';
+import { verifyVoucher as verifyVoucherFromController } from './voucherController.js';
 
 /**
  * Fetch sales & order summary metrics
@@ -18,16 +19,18 @@ export function getSummary(req, res) {
       WHERE status IN ('served', 'completed', 'delivered')
     `).get().count;
 
+    // Realized revenue from completed/served or paid orders
     const totalRevenue = db.prepare(`
       SELECT SUM(totalAmount) as total
       FROM orders
-      WHERE status != 'cancelled'
+      WHERE (paymentStatus IN ('paid', 'Paid') OR status IN ('served', 'completed', 'delivered'))
+        AND status != 'cancelled'
     `).get().total || 0;
 
     res.json({
       activeOrders: activeCount,
       completedOrders: completedCount,
-      totalRevenue: Number(totalRevenue.toFixed(2))
+      totalRevenue: Number(Number(totalRevenue).toFixed(2))
     });
   } catch (error) {
     console.error('getSummary error:', error);
@@ -36,11 +39,26 @@ export function getSummary(req, res) {
 }
 
 /**
- * Fetch table layout and status list
+ * Fetch table layout and status list from SQLite database
  * GET /api/tables
  */
 export function getTables(req, res) {
   try {
+    const tables = db.prepare('SELECT id, tableNumber, zone, capacity, status FROM restaurant_tables ORDER BY tableNumber ASC').all();
+    if (tables && tables.length > 0) {
+      const formatted = tables.map(t => {
+        const numStr = String(t.tableNumber).padStart(2, '0');
+        return {
+          id: numStr,
+          tableNumber: numStr,
+          zone: t.zone || 'Main Dining',
+          capacity: Number(t.capacity || 4),
+          status: t.status || 'available'
+        };
+      });
+      return res.json(formatted);
+    }
+
     const defaultTables = [
       { id: '01', tableNumber: '01', zone: 'Patio Terrace', capacity: 2, status: 'available' },
       { id: '02', tableNumber: '02', zone: 'Window View', capacity: 4, status: 'available' },
@@ -59,49 +77,47 @@ export function getTables(req, res) {
 }
 
 /**
- * Verify promo / voucher code (queries real SQLite vouchers table with fallback)
- * POST /api/vouchers/verify
+ * Update table status or details
+ * PATCH /api/tables/:id/status or PUT /api/tables/:id
  */
-export function verifyVoucher(req, res) {
+export function updateTable(req, res) {
   try {
-    const { code } = req.body;
-    if (!code) {
-      return res.status(400).json({ valid: false, error: 'Promo code is required' });
+    const { id } = req.params;
+    const { status, zone, capacity } = req.body;
+    const parsed = parseInt(id, 10);
+    const tblNum = !isNaN(parsed) ? parsed : -1;
+
+    const existing = db.prepare('SELECT * FROM restaurant_tables WHERE tableNumber = ? OR id = ?').get(tblNum, id);
+    if (!existing) {
+      return res.status(404).json({ error: 'Table not found' });
     }
 
-    const cleanCode = code.trim().toUpperCase();
+    const newStatus = status || existing.status;
+    const newZone = zone || existing.zone;
+    const newCapacity = capacity !== undefined ? Number(capacity) : existing.capacity;
 
-    // 1. Query dynamic vouchers table from database
-    const voucher = db.prepare(`
-      SELECT code, discountPercent, description
-      FROM vouchers
-      WHERE UPPER(code) = ? AND isActive = 1
-    `).get(cleanCode);
+    db.prepare(`
+      UPDATE restaurant_tables
+      SET status = ?, zone = ?, capacity = ?
+      WHERE id = ?
+    `).run(newStatus, newZone, newCapacity, existing.id);
 
-    if (voucher) {
-      return res.json({
-        valid: true,
-        code: voucher.code,
-        discountPercent: Number(voucher.discountPercent),
-        description: voucher.description
-      });
-    }
-
-    // 2. Fallback promo codes catalog
-    const PROMO_CODES = {
-      'AURAVIP15': { discountPercent: 15, description: '15% Off VIP Dining Special' },
-      'WELCOME10': { discountPercent: 10, description: '10% Off First-Time Guest' },
-      'CHEF25': { discountPercent: 25, description: '25% Off Chef Masterclass Promo' },
-      'BISTRO20': { discountPercent: 20, description: '20% Weekend Celebration Discount' }
-    };
-
-    if (PROMO_CODES[cleanCode]) {
-      return res.json({ valid: true, code: cleanCode, ...PROMO_CODES[cleanCode] });
-    }
-
-    res.status(404).json({ valid: false, error: 'Invalid or expired voucher code' });
+    const numStr = String(existing.tableNumber).padStart(2, '0');
+    res.json({
+      message: 'Table updated successfully',
+      id: numStr,
+      tableNumber: numStr,
+      status: newStatus,
+      zone: newZone,
+      capacity: newCapacity
+    });
   } catch (error) {
-    console.error('verifyVoucher error:', error);
-    res.status(500).json({ error: 'Failed to verify voucher' });
+    console.error('updateTable error:', error);
+    res.status(500).json({ error: 'Failed to update table' });
   }
 }
+
+/**
+ * Re-export verifyVoucher from voucherController for route backward compatibility
+ */
+export const verifyVoucher = verifyVoucherFromController;

@@ -135,6 +135,17 @@ export function AuthProvider({ children }) {
     }
   }, [user]);
 
+  // Listen for global 401 Unauthorized token expiry events
+  useEffect(() => {
+    const handleAuthExpired = () => {
+      setUser(null);
+    };
+    window.addEventListener('aura_auth_expired', handleAuthExpired);
+    return () => {
+      window.removeEventListener('aura_auth_expired', handleAuthExpired);
+    };
+  }, []);
+
   const login = async (username, password) => {
     const cleanUser = String(username || '').trim().toLowerCase();
     const cleanPass = String(password || '').trim();

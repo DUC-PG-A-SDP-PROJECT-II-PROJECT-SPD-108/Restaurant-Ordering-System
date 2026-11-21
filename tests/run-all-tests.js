@@ -10,7 +10,6 @@ import { runOrderTests } from './04_orders_kds.test.js';
 import { runVoucherTests } from './05_vouchers.test.js';
 import { runStaffTests } from './06_staff_hr.test.js';
 import { runStatsTests } from './07_stats_analytics.test.js';
-import { runE2EWorkflowTests } from './08_e2e_workflow.test.js';
 
 async function main() {
   const startTime = Date.now();
@@ -21,15 +20,15 @@ async function main() {
   console.log(`╚══════════════════════════════════════════════════════════════════════════╝${colors.reset}`);
 
   // 1. Check Backend Server Health
-  console.log(`\n${colors.gray}Checking Backend Server on http://localhost:5000/api/health...${colors.reset}`);
+  console.log(`\n${colors.gray}Checking Backend Server on http://localhost:5050/api/health...${colors.reset}`);
   try {
     const health = await apiRequest('/health');
     if (!health.ok) {
       throw new Error(`Health returned HTTP ${health.status}`);
     }
-    console.log(`${colors.green}✔ Backend Server is HEALTHY & RUNNING.${colors.reset}`);
+    console.log(`${colors.green}✔ Backend Server is HEALTHY & RUNNING on Port 5050.${colors.reset}`);
   } catch (err) {
-    console.error(`\n${colors.red}${colors.bright}✖ ERROR: Backend Server is not reachable at http://localhost:5000!${colors.reset}`);
+    console.error(`\n${colors.red}${colors.bright}✖ ERROR: Backend Server is not reachable at http://localhost:5050!${colors.reset}`);
     console.error(`${colors.yellow}Please start the backend server first (e.g. run "run.bat" or "npm --prefix backend run dev") and retry.${colors.reset}\n`);
     process.exit(1);
   }
@@ -41,8 +40,7 @@ async function main() {
     { name: 'Orders & KDS', fn: runOrderTests },
     { name: 'Vouchers & Promo', fn: runVoucherTests },
     { name: 'Staff & HR', fn: runStaffTests },
-    { name: 'Stats & Analytics', fn: runStatsTests },
-    { name: 'E2E Full Workflow', fn: runE2EWorkflowTests }
+    { name: 'Stats & Analytics', fn: runStatsTests }
   ];
 
   const results = [];

@@ -63,9 +63,10 @@ CREATE TABLE restaurant_tables (
 CREATE TABLE vouchers (
     id SERIAL PRIMARY KEY,
     code TEXT NOT NULL UNIQUE,
-    discount_percent NUMERIC(5, 2) NOT NULL,
+    discount_percent NUMERIC(5, 2) NOT NULL CHECK (discount_percent > 0 AND discount_percent <= 100),
     description TEXT,
     is_active BOOLEAN DEFAULT TRUE,
+    is_featured BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -85,6 +86,7 @@ CREATE TABLE orders (
     subtotal NUMERIC(10, 2) DEFAULT 0.00,
     discount NUMERIC(10, 2) DEFAULT 0.00,
     promo_code TEXT,
+    delivery_fee NUMERIC(10, 2) DEFAULT 0.00,
     tax NUMERIC(10, 2) DEFAULT 0.00,
     service_fee NUMERIC(10, 2) DEFAULT 0.00,
     total NUMERIC(10, 2) DEFAULT 0.00,
@@ -152,14 +154,23 @@ CREATE POLICY "Public Read Users" ON users FOR SELECT USING (true);
 CREATE POLICY "Public Write Users" ON users FOR ALL USING (true);
 
 -- ============================================================================
--- REALTIME SUBSCRIPTIONS
--- Enable real-time websocket broadcasts on table changes
+-- REALTIME SUBSCRIPTIONS (IDEMPOTENT SAFE)
+-- Enable real-time websocket broadcasts on table changes without error on re-run
 -- ============================================================================
-ALTER PUBLICATION supabase_realtime ADD TABLE categories;
-ALTER PUBLICATION supabase_realtime ADD TABLE orders;
-ALTER PUBLICATION supabase_realtime ADD TABLE menu_items;
-ALTER PUBLICATION supabase_realtime ADD TABLE restaurant_tables;
-ALTER PUBLICATION supabase_realtime ADD TABLE vouchers;
+DO $$
+DECLARE
+    tbl text;
+BEGIN
+    FOR tbl IN SELECT unnest(ARRAY['categories', 'orders', 'menu_items', 'restaurant_tables', 'vouchers', 'users'])
+    LOOP
+        IF NOT EXISTS (
+            SELECT 1 FROM pg_publication_tables 
+            WHERE pubname = 'supabase_realtime' AND tablename = tbl
+        ) THEN
+            EXECUTE format('ALTER PUBLICATION supabase_realtime ADD TABLE %I', tbl);
+        END IF;
+    END LOOP;
+END $$;
 
 -- ============================================================================
 -- SEED DATA INSERTION
@@ -180,12 +191,17 @@ ON CONFLICT (id) DO UPDATE SET
     description = EXCLUDED.description,
     display_order = EXCLUDED.display_order;
 
--- B. Insert Promo Codes / Vouchers
-INSERT INTO vouchers (code, discount_percent, description, is_active) VALUES
-('AURAVIP15', 15.00, '15% Off VIP Dining Special', true),
-('WELCOME10', 10.00, '10% Off First-Time Guest', true),
-('CHEF25', 25.00, '25% Off Chef Masterclass Promo', true)
-ON CONFLICT (code) DO NOTHING;
+-- B. Insert Promo Codes / Vouchers (Full 4 Seed Vouchers with Featured Flags)
+INSERT INTO vouchers (code, discount_percent, description, is_active, is_featured) VALUES
+('AURAVIP15', 15.00, '15% Off VIP Dining Special', true, true),
+('WELCOME10', 10.00, '10% Off First-Time Guest', true, false),
+('CHEF25', 25.00, '25% Off Chef Masterclass Promo', true, false),
+('BISTRO20', 20.00, '20% Weekend Celebration Discount', true, false)
+ON CONFLICT (code) DO UPDATE SET
+    discount_percent = EXCLUDED.discount_percent,
+    description = EXCLUDED.description,
+    is_active = EXCLUDED.is_active,
+    is_featured = EXCLUDED.is_featured;
 
 -- C. Insert Restaurant Tables
 INSERT INTO restaurant_tables (id, table_number, name, zone, capacity, status) VALUES
@@ -509,5 +525,6 @@ ON CONFLICT (username) DO UPDATE SET
     shift       = EXCLUDED.shift,
     hourly_rate = EXCLUDED.hourly_rate,
     duty_status = EXCLUDED.duty_status,
-    hire_date   = EXCLUDED.hire_date;
+    hire_date   = EXCLUDED.hire_date,
+    updated_at  = NOW();
 

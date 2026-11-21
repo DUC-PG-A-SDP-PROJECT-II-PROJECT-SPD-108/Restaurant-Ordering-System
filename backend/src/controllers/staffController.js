@@ -187,9 +187,17 @@ export function deleteStaff(req, res) {
   try {
     const { id } = req.params;
     const targetId = resolveStaffId(id);
-    const existing = db.prepare('SELECT id FROM users WHERE id = ? OR username = ?').get(targetId, id);
+    const existing = db.prepare('SELECT id, role, username FROM users WHERE id = ? OR username = ?').get(targetId, id);
     if (!existing) {
       return res.status(404).json({ error: 'Staff member not found' });
+    }
+
+    // Protect the last remaining admin account from deletion
+    if (existing.role === 'admin') {
+      const adminCount = db.prepare("SELECT COUNT(*) as count FROM users WHERE role = 'admin'").get().count;
+      if (adminCount <= 1) {
+        return res.status(400).json({ error: 'Cannot delete the only remaining admin account' });
+      }
     }
 
     db.prepare('DELETE FROM users WHERE id = ?').run(existing.id);

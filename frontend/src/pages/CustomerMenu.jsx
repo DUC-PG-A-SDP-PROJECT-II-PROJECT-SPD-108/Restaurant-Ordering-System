@@ -27,7 +27,15 @@ export default function CustomerMenu({
 
   // Filtering & Sorting logic
   const filteredDishes = dishes.filter((dish) => {
-    const matchesCategory = activeCategory === 'all' || dish.category === activeCategory;
+    const activeCatObj = categories.find((c) => c.id === activeCategory);
+    const matchesCategory =
+      activeCategory === 'all' ||
+      dish.category === activeCategory ||
+      (activeCatObj && (
+        dish.category === activeCatObj.name ||
+        dish.categoryName === activeCatObj.name ||
+        (activeCatObj.dbId && dish.categoryId === activeCatObj.dbId)
+      ));
     const query = searchQuery.toLowerCase().trim();
     const matchesSearch =
       !query ||

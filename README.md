@@ -331,7 +331,7 @@ npm run seed
   cd backend
   npm run dev
   ```
-  *(Server ដំណើរការនៅ: `http://localhost:5000` & Health Check: `http://localhost:5000/api/health`)*
+  *(Server ដំណើរការនៅ: `http://localhost:5050` & Health Check: `http://localhost:5050/api/health`)*
 
 * **Terminal ទី ២ (React Frontend Web Client):**
   ```bash

@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000/api';
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5050/api';
 
 const api = axios.create({
   baseURL: BACKEND_URL,
@@ -23,6 +23,21 @@ api.interceptors.request.use((config) => {
   } catch (e) {}
   return config;
 });
+
+// Response interceptor to handle 401 Unauthorized globally
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response && error.response.status === 401) {
+      console.warn('Session expired or unauthorized (401). Triggering logout event.');
+      try {
+        localStorage.removeItem('aura_bistro_auth');
+        window.dispatchEvent(new CustomEvent('aura_auth_expired'));
+      } catch (e) {}
+    }
+    return Promise.reject(error);
+  }
+);
 
 /* ==========================================================================
    0. AUTHENTICATION API
@@ -96,7 +111,10 @@ export async function getMenuItems() {
     return (res.data || []).map(item => ({
       id: item.id,
       name: item.name,
-      category: item.categoryName || item.category || 'Mains',
+      category: item.category || (item.categoryName ? item.categoryName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') : 'mains'),
+      categoryName: item.categoryName || item.category || 'Mains',
+      categoryId: item.categoryId || item.dbId,
+      dbId: item.dbId,
       price: Number(item.price),
       rating: Number(item.rating || 5.0),
       reviewCount: item.reviewCount || 12,
@@ -222,6 +240,13 @@ export async function saveOrder(order) {
       specialNotes: order.specialNotes || '',
       paymentMethod: order.paymentMethod || 'cash',
       paymentStatus: order.paymentStatus || 'unpaid',
+      voucherCode: order.promoCode || order.voucherCode || null,
+      promoCode: order.promoCode || order.voucherCode || null,
+      discountAmount: Number(order.discount || order.discountAmount || 0),
+      subtotal: Number(order.subtotal || 0),
+      tax: Number(order.tax || 0),
+      serviceFee: Number(order.serviceFee || 0),
+      totalAmount: Number(order.total || order.totalAmount || 0),
       items: (order.items || []).map(it => ({
         menuItemId: it.id || it.dishId,
         id: it.id || it.dishId,
@@ -261,6 +286,16 @@ export async function getVouchers() {
   } catch (err) {
     console.warn('Backend getVouchers failed:', err.message);
     return null;
+  }
+}
+
+export async function verifyVoucher(code, subtotal = 0) {
+  try {
+    const res = await api.post('/vouchers/verify', { code, subtotal });
+    return res.data;
+  } catch (err) {
+    console.warn('Backend verifyVoucher failed:', err.response?.data?.error || err.message);
+    return { valid: false, error: err.response?.data?.error || err.message };
   }
 }
 
@@ -334,6 +369,29 @@ export async function deleteStaffUser(id) {
   } catch (err) {
     console.warn('Backend deleteStaffUser failed:', err.message);
     return false;
+  }
+}
+
+/* ==========================================================================
+   6. RESTAURANT TABLES API
+   ========================================================================== */
+export async function getTables() {
+  try {
+    const res = await api.get('/tables');
+    return res.data;
+  } catch (err) {
+    console.warn('Backend getTables failed:', err.message);
+    return null;
+  }
+}
+
+export async function updateTableStatus(id, status) {
+  try {
+    const res = await api.patch(`/tables/${id}/status`, { status });
+    return res.data;
+  } catch (err) {
+    console.warn('Backend updateTableStatus failed:', err.message);
+    return null;
   }
 }
 
