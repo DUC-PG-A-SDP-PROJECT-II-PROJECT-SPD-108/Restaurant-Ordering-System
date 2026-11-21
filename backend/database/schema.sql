@@ -61,6 +61,11 @@ CREATE TABLE IF NOT EXISTS orders (
     deliveryAddress TEXT,
     deliveryFee REAL NOT NULL DEFAULT 0.0,
     customerNotes TEXT,
+    subtotal REAL NOT NULL DEFAULT 0.0,
+    tax REAL NOT NULL DEFAULT 0.0,
+    serviceFee REAL NOT NULL DEFAULT 0.0,
+    discountAmount REAL NOT NULL DEFAULT 0.0,
+    voucherCode TEXT,
     totalAmount REAL NOT NULL DEFAULT 0.0,
     paymentMethod TEXT DEFAULT 'cash',
     paymentStatus TEXT DEFAULT 'unpaid',
@@ -84,7 +89,28 @@ CREATE TABLE IF NOT EXISTS order_items (
 CREATE INDEX IF NOT EXISTS idx_menu_items_category ON menu_items(categoryId);
 CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
 CREATE INDEX IF NOT EXISTS idx_orders_orderType ON orders(orderType);
+CREATE INDEX IF NOT EXISTS idx_orders_orderCode ON orders(orderCode);
 CREATE INDEX IF NOT EXISTS idx_order_items_orderId ON order_items(orderId);
+
+-- Triggers for Automatic Category Count Synchronization
+CREATE TRIGGER IF NOT EXISTS trg_menu_items_insert_count
+AFTER INSERT ON menu_items
+BEGIN
+    UPDATE categories SET count = count + 1 WHERE id = NEW.categoryId;
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_menu_items_delete_count
+AFTER DELETE ON menu_items
+BEGIN
+    UPDATE categories SET count = MAX(0, count - 1) WHERE id = OLD.categoryId;
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_menu_items_update_count
+AFTER UPDATE OF categoryId ON menu_items
+BEGIN
+    UPDATE categories SET count = MAX(0, count - 1) WHERE id = OLD.categoryId;
+    UPDATE categories SET count = count + 1 WHERE id = NEW.categoryId;
+END;
 
 -- 6. Table RestaurantTables (Floor Plan & Table QR Codes)
 CREATE TABLE IF NOT EXISTS restaurant_tables (
@@ -103,14 +129,26 @@ CREATE TABLE IF NOT EXISTS vouchers (
     discountPercent REAL NOT NULL CHECK(discountPercent > 0 AND discountPercent <= 100),
     description TEXT,
     isActive INTEGER NOT NULL DEFAULT 1,
+    isFeatured INTEGER NOT NULL DEFAULT 0,
     createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Seed Initial Tables (If Empty)
+INSERT OR IGNORE INTO restaurant_tables (tableNumber, zone, capacity, status) VALUES
+(1, 'Patio Terrace', 2, 'available'),
+(2, 'Window View', 4, 'available'),
+(3, 'Cozy Booth', 4, 'available'),
+(4, 'Main Dining Hall', 6, 'available'),
+(5, 'VIP Wine Lounge', 8, 'available'),
+(6, 'Main Dining Hall', 4, 'available'),
+(7, 'Patio Terrace', 2, 'available'),
+(8, 'Chef Counter', 2, 'available');
+
 -- Seed Initial Vouchers
-INSERT OR IGNORE INTO vouchers (code, discountPercent, description, isActive) VALUES
-('AURAVIP15', 15.0, '15% Off VIP Dining Special', 1),
-('WELCOME10', 10.0, '10% Off First-Time Guest', 1),
-('CHEF25', 25.0, '25% Off Chef Masterclass Promo', 1),
-('BISTRO20', 20.0, '20% Weekend Celebration Discount', 1);
+INSERT OR IGNORE INTO vouchers (code, discountPercent, description, isActive, isFeatured) VALUES
+('AURAVIP15', 15.0, '15% Off VIP Dining Special', 1, 1),
+('WELCOME10', 10.0, '10% Off First-Time Guest', 1, 0),
+('CHEF25', 25.0, '25% Off Chef Masterclass Promo', 1, 0),
+('BISTRO20', 20.0, '20% Weekend Celebration Discount', 1, 0);
 
 

@@ -168,6 +168,9 @@ export function deleteCategory(req, res) {
     }
     res.json({ message: 'Category deleted successfully', id: req.params.id, dbId: targetId });
   } catch (error) {
+    if (error.message && error.message.includes('FOREIGN KEY')) {
+      return res.status(409).json({ error: 'Cannot delete category: it contains dishes that are in the menu. Please reassign or delete the dishes first.' });
+    }
     console.error('deleteCategory error:', error);
     res.status(500).json({ error: 'Failed to delete category' });
   }
@@ -421,6 +424,9 @@ export function deleteMenuItem(req, res) {
     }
     res.json({ message: 'Menu item deleted successfully', id: `dish-${targetId}`, dbId: targetId });
   } catch (error) {
+    if (error.message && error.message.includes('FOREIGN KEY')) {
+      return res.status(409).json({ error: 'Cannot delete menu item: it is referenced in past customer orders. Please toggle it to Out of Stock instead.' });
+    }
     console.error('deleteMenuItem error:', error);
     res.status(500).json({ error: 'Failed to delete menu item' });
   }

@@ -1,5 +1,42 @@
 import db from '../../database/db.js';
 
+// Live Server-Sent Events (SSE) Client Subscribers for Real-Time Kitchen Display (KDS)
+const sseClients = new Set();
+
+/**
+ * Real-Time Order Stream (Server-Sent Events)
+ * GET /api/orders/stream
+ */
+export function streamOrders(req, res) {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders?.();
+
+  const client = { id: Date.now(), res };
+  sseClients.add(client);
+
+  res.write(`data: ${JSON.stringify({ type: 'connected', timestamp: new Date().toISOString() })}\n\n`);
+
+  req.on('close', () => {
+    sseClients.delete(client);
+  });
+}
+
+/**
+ * Broadcast event to all active KDS & Floor SSE subscribers
+ */
+export function broadcastOrderEvent(event, data) {
+  const payload = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+  for (const client of sseClients) {
+    try {
+      client.res.write(payload);
+    } catch (err) {
+      sseClients.delete(client);
+    }
+  }
+}
+
 /**
  * Helper to resolve dish from menu_items by id, 'dish-X', or dish name
  */
@@ -69,6 +106,9 @@ export function createOrder(req, res) {
       specialNotes = '',
       paymentMethod = 'cash',
       paymentStatus = 'unpaid',
+      voucherCode: clientVoucherCode,
+      promoCode: clientPromoCode,
+      discountAmount: clientDiscountAmount,
       items = []
     } = req.body;
 
@@ -101,13 +141,34 @@ export function createOrder(req, res) {
       });
     }
 
-    const tax = subtotal * 0.10;
-    const serviceFee = subtotal * 0.05;
-    const totalAmount = subtotal + tax + serviceFee + Number(deliveryFee);
+    // Process & verify promotional voucher if applied
+    const promoInput = (clientVoucherCode || clientPromoCode || '').trim().toUpperCase();
+    let appliedVoucherCode = null;
+    let finalDiscountAmount = 0;
+
+    if (promoInput) {
+      const voucher = db.prepare('SELECT code, discountPercent FROM vouchers WHERE UPPER(code) = ? AND isActive = 1').get(promoInput);
+      if (voucher) {
+        appliedVoucherCode = voucher.code;
+        finalDiscountAmount = Number(((subtotal * voucher.discountPercent) / 100).toFixed(2));
+      } else if (clientDiscountAmount && Number(clientDiscountAmount) > 0) {
+        finalDiscountAmount = Number(Number(clientDiscountAmount).toFixed(2));
+      }
+    } else if (clientDiscountAmount && Number(clientDiscountAmount) > 0) {
+      finalDiscountAmount = Number(Number(clientDiscountAmount).toFixed(2));
+    }
+
+    const discountedSubtotal = Math.max(0, subtotal - finalDiscountAmount);
+    const tax = Number((discountedSubtotal * 0.10).toFixed(2));
+    const serviceFee = Number((discountedSubtotal * 0.05).toFixed(2));
+    const totalAmount = Number((discountedSubtotal + tax + serviceFee + Number(deliveryFee)).toFixed(2));
 
     const insertOrder = db.prepare(`
-      INSERT INTO orders (orderCode, orderType, tableNumber, customerName, customerPhone, deliveryAddress, deliveryFee, customerNotes, totalAmount, paymentMethod, paymentStatus, status)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')
+      INSERT INTO orders (
+        orderCode, orderType, tableNumber, customerName, customerPhone, deliveryAddress, deliveryFee, 
+        customerNotes, subtotal, tax, serviceFee, discountAmount, voucherCode, totalAmount, paymentMethod, paymentStatus, status
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')
     `);
 
     const insertOrderItem = db.prepare(`
@@ -125,7 +186,12 @@ export function createOrder(req, res) {
         deliveryAddress || null,
         Number(deliveryFee),
         customerNotes || specialNotes || '',
-        Number(totalAmount.toFixed(2)),
+        Number(subtotal.toFixed(2)),
+        tax,
+        serviceFee,
+        finalDiscountAmount,
+        appliedVoucherCode,
+        totalAmount,
         paymentMethod || 'cash',
         paymentStatus || 'unpaid'
       );
@@ -134,10 +200,30 @@ export function createOrder(req, res) {
       for (const rec of itemRecords) {
         insertOrderItem.run(rowId, rec.menuItemId, rec.quantity, rec.unitPrice);
       }
+
+      // Automatically update physical table status to occupied if dine-in
+      if (normalizedOrderType === 'dine_in' && finalTable) {
+        const tblNum = parseInt(finalTable, 10);
+        if (!isNaN(tblNum)) {
+          db.prepare("UPDATE restaurant_tables SET status = 'occupied' WHERE tableNumber = ?").run(tblNum);
+        }
+      }
+
       return rowId;
     });
 
     const newDbId = tx();
+
+    // Broadcast new order to live KDS subscribers via SSE
+    broadcastOrderEvent('order_created', {
+      orderCode: finalOrderCode,
+      orderId: newDbId,
+      orderType: normalizedOrderType,
+      tableNumber: finalTable,
+      customerName,
+      totalAmount,
+      status: 'pending'
+    });
 
     res.status(201).json({
       message: 'Order placed successfully',
@@ -146,7 +232,12 @@ export function createOrder(req, res) {
       orderCode: finalOrderCode,
       dbId: newDbId,
       status: 'pending',
-      totalAmount: Number(totalAmount.toFixed(2))
+      subtotal: Number(subtotal.toFixed(2)),
+      discountAmount: finalDiscountAmount,
+      voucherCode: appliedVoucherCode,
+      tax,
+      serviceFee,
+      totalAmount
     });
   } catch (error) {
     console.error('createOrder error:', error);
@@ -160,20 +251,31 @@ export function createOrder(req, res) {
  */
 export function getOrders(req, res) {
   try {
-    const { status } = req.query;
+    const { status, date, page, limit } = req.query;
     let query = 'SELECT * FROM orders';
     const params = [];
+    const conditions = [];
 
     if (status) {
       if (status === 'cooking' || status === 'preparing') {
-        query += " WHERE status IN ('cooking', 'preparing')";
+        conditions.push("status IN ('cooking', 'preparing')");
       } else if (status === 'served' || status === 'completed') {
-        query += " WHERE status IN ('served', 'completed', 'delivered')";
+        conditions.push("status IN ('served', 'completed', 'delivered')");
       } else {
-        query += ' WHERE status = ?';
+        conditions.push('status = ?');
         params.push(status);
       }
     }
+
+    if (date) {
+      conditions.push('DATE(createdAt) = ?');
+      params.push(date);
+    }
+
+    if (conditions.length > 0) {
+      query += ' WHERE ' + conditions.join(' AND ');
+    }
+
     query += ' ORDER BY id DESC';
 
     const orders = db.prepare(query).all(...params);
@@ -222,9 +324,13 @@ export function getOrders(req, res) {
         paymentStatus: ord.paymentStatus || 'unpaid',
         total: Number(ord.totalAmount || 0),
         totalAmount: Number(ord.totalAmount || 0),
-        subtotal: Number((ord.totalAmount * 0.85).toFixed(2)),
-        tax: Number((ord.totalAmount * 0.10).toFixed(2)),
-        serviceFee: Number((ord.totalAmount * 0.05).toFixed(2)),
+        subtotal: Number(ord.subtotal != null && ord.subtotal > 0 ? ord.subtotal : (ord.totalAmount * 0.85).toFixed(2)),
+        discount: Number(ord.discountAmount || 0),
+        discountAmount: Number(ord.discountAmount || 0),
+        voucherCode: ord.voucherCode || null,
+        promoCode: ord.voucherCode || null,
+        tax: Number(ord.tax != null && ord.tax > 0 ? ord.tax : (ord.totalAmount * 0.10).toFixed(2)),
+        serviceFee: Number(ord.serviceFee != null && ord.serviceFee > 0 ? ord.serviceFee : (ord.totalAmount * 0.05).toFixed(2)),
         specialNotes: ord.customerNotes || '',
         customerNotes: ord.customerNotes || '',
         timestamp: ord.createdAt || new Date().toISOString(),
@@ -232,6 +338,26 @@ export function getOrders(req, res) {
         items: itemsList
       };
     });
+
+    const isPaginated = page !== undefined || limit !== undefined;
+    if (isPaginated) {
+      const pageNum = Math.max(1, parseInt(page, 10) || 1);
+      const limitNum = Math.max(1, Math.min(100, parseInt(limit, 10) || 20));
+      const totalCount = fullOrders.length;
+      const totalPages = Math.ceil(totalCount / limitNum);
+      const offset = (pageNum - 1) * limitNum;
+      const pagedOrders = fullOrders.slice(offset, offset + limitNum);
+
+      return res.json({
+        orders: pagedOrders,
+        pagination: {
+          page: pageNum,
+          limit: limitNum,
+          total: totalCount,
+          totalPages
+        }
+      });
+    }
 
     res.json(fullOrders);
   } catch (error) {
@@ -273,7 +399,15 @@ export function getOrderById(req, res) {
       orderCode: code,
       diningMode: order.orderType === 'dine_in' ? 'dine-in' : order.orderType,
       status: normalizedStatus,
-      total: Number(order.totalAmount),
+      total: Number(order.totalAmount || 0),
+      totalAmount: Number(order.totalAmount || 0),
+      subtotal: Number(order.subtotal != null && order.subtotal > 0 ? order.subtotal : (order.totalAmount * 0.85).toFixed(2)),
+      discount: Number(order.discountAmount || 0),
+      discountAmount: Number(order.discountAmount || 0),
+      voucherCode: order.voucherCode || null,
+      promoCode: order.voucherCode || null,
+      tax: Number(order.tax != null && order.tax > 0 ? order.tax : (order.totalAmount * 0.10).toFixed(2)),
+      serviceFee: Number(order.serviceFee != null && order.serviceFee > 0 ? order.serviceFee : (order.totalAmount * 0.05).toFixed(2)),
       items: getItems.all(order.id)
     });
   } catch (error) {
@@ -301,15 +435,39 @@ export function updateOrderStatus(req, res) {
     if (status === 'preparing') dbStatus = 'cooking';
     if (status === 'completed' || status === 'delivered') dbStatus = 'served';
 
-    const result = db.prepare(`
-      UPDATE orders
-      SET status = ?, updatedAt = CURRENT_TIMESTAMP
-      WHERE id = ? OR orderCode = ?
-    `).run(dbStatus, id, id);
-
-    if (result.changes === 0) {
+    const targetOrder = db.prepare('SELECT id, tableNumber, orderType FROM orders WHERE id = ? OR orderCode = ?').get(id, id);
+    if (!targetOrder) {
       return res.status(404).json({ error: 'Order not found' });
     }
+
+    db.prepare(`
+      UPDATE orders
+      SET status = ?, updatedAt = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `).run(dbStatus, targetOrder.id);
+
+    // If order was served, completed, or cancelled, check if table can be returned to available
+    if (['served', 'completed', 'delivered', 'cancelled'].includes(dbStatus) && targetOrder.tableNumber) {
+      const tblNum = parseInt(targetOrder.tableNumber, 10);
+      if (!isNaN(tblNum)) {
+        const tblStr = String(tblNum).padStart(2, '0');
+        const activeAtTable = db.prepare(`
+          SELECT COUNT(*) as count FROM orders 
+          WHERE (tableNumber = ? OR tableNumber = ?) AND status IN ('pending', 'cooking', 'preparing', 'ready') AND id != ?
+        `).get(tblStr, String(tblNum), targetOrder.id)?.count || 0;
+
+        if (activeAtTable === 0) {
+          db.prepare("UPDATE restaurant_tables SET status = 'available' WHERE tableNumber = ?").run(tblNum);
+        }
+      }
+    }
+
+    // Broadcast status change to live KDS subscribers via SSE
+    broadcastOrderEvent('order_status_updated', {
+      orderId: targetOrder.id,
+      orderCode: id,
+      status: dbStatus
+    });
 
     res.json({
       message: 'Order status updated successfully',
@@ -319,5 +477,81 @@ export function updateOrderStatus(req, res) {
   } catch (error) {
     console.error('updateOrderStatus error:', error);
     res.status(500).json({ error: 'Failed to update order status' });
+  }
+}
+
+/**
+ * Generate 80mm/58mm printable thermal receipt payload
+ * GET /api/orders/:id/receipt
+ */
+export function getOrderReceipt(req, res) {
+  try {
+    const { id } = req.params;
+    const targetOrder = db.prepare('SELECT * FROM orders WHERE id = ? OR orderCode = ?').get(id, id);
+    if (!targetOrder) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+
+    const dbItems = db.prepare(`
+      SELECT oi.*, m.name
+      FROM order_items oi
+      JOIN menu_items m ON oi.menuItemId = m.id
+      WHERE oi.orderId = ?
+    `).all(targetOrder.id);
+
+    const items = dbItems.map(it => ({
+      name: it.name,
+      quantity: Number(it.quantity),
+      unitPrice: Number(it.unitPrice),
+      total: Number((it.quantity * it.unitPrice).toFixed(2))
+    }));
+
+    const orderCode = targetOrder.orderCode || `ORD-${1000 + targetOrder.id}`;
+    const subtotal = Number(targetOrder.subtotal || 0);
+    const discountAmount = Number(targetOrder.discountAmount || 0);
+    const tax = Number(targetOrder.tax || 0);
+    const serviceFee = Number(targetOrder.serviceFee || 0);
+    const deliveryFee = Number(targetOrder.deliveryFee || 0);
+    const totalAmount = Number(targetOrder.totalAmount || 0);
+
+    const receipt = {
+      restaurant: {
+        name: 'AURA BISTRO',
+        tagline: 'Artisanal Gastronomy & Fine Dining',
+        address: 'Preah Monivong Blvd, Phnom Penh, Cambodia',
+        vatNumber: 'K001-902401829',
+        telephone: '+855 23 999 888',
+        website: 'https://aurabistro.com'
+      },
+      invoice: {
+        orderCode,
+        dateTime: targetOrder.createdAt,
+        diningMode: (targetOrder.orderType || 'dine_in').toUpperCase(),
+        tableNumber: targetOrder.tableNumber ? `Table ${targetOrder.tableNumber}` : 'N/A',
+        guestName: targetOrder.customerName || 'Valued Guest',
+        paymentMethod: (targetOrder.paymentMethod || 'cash').toUpperCase(),
+        paymentStatus: (targetOrder.paymentStatus || 'unpaid').toUpperCase(),
+        orderStatus: (targetOrder.status || 'pending').toUpperCase()
+      },
+      lineItems: items,
+      financialSummary: {
+        subtotal,
+        discountAmount,
+        voucherCode: targetOrder.voucherCode || null,
+        tax10Percent: tax,
+        serviceFee5Percent: serviceFee,
+        deliveryFee,
+        netPayableAmount: totalAmount
+      },
+      footer: {
+        complimentaryMessage: 'Thank you for dining with Aura Bistro!',
+        invitation: 'Please visit us again. Follow us @AuraBistro'
+      }
+    };
+
+    res.json(receipt);
+  } catch (error) {
+    console.error('getOrderReceipt error:', error);
+    res.status(500).json({ error: 'Failed to generate receipt: ' + error.message });
   }
 }

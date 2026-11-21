@@ -45,8 +45,8 @@ if not exist "%ROOT_DIR%frontend\node_modules\" (
 )
 
 :: 5. Launch Backend Server in Developer Watch Mode (Node --watch)
-echo [DEV] Launching Backend Server on http://localhost:5000 (Watch Mode)...
-start "ROS Backend API (Port 5000)" cmd /k "cd /d "%ROOT_DIR%backend" && set NODE_ENV=development && npm run dev"
+echo [DEV] Launching Backend Server on http://localhost:5050 (Watch Mode)...
+start "ROS Backend API (Port 5050)" cmd /k "cd /d "%ROOT_DIR%backend" && set NODE_ENV=development && npm run dev"
 
 ping 127.0.0.1 -n 4 > nul
 
@@ -67,8 +67,8 @@ echo ===================================================================
 echo   Customer Web Menu:   http://localhost:5173
 echo   Bistro Admin Panel:   http://localhost:5173/admin-panel-bistro
 echo   Admin Staff Login:    http://localhost:5173/admin-panel-bistro-login
-echo   Backend REST API:     http://localhost:5000/api
-echo   API Health Status:    http://localhost:5000/api/health
+echo   Backend REST API:     http://localhost:5050/api
+echo   API Health Status:    http://localhost:5050/api/health
 echo ===================================================================
 echo   Default Credentials:
 echo     - Admin:   username: admin   ^| password: admin123

@@ -4,7 +4,7 @@
  */
 import assert from 'node:assert';
 
-export const API_BASE = process.env.API_URL || 'http://localhost:5000/api';
+export const API_BASE = process.env.API_URL || 'http://localhost:5050/api';
 
 // ANSI Colors for Terminal
 export const colors = {
@@ -75,7 +75,13 @@ export async function apiRequest(endpoint, options = {}) {
 /**
  * Authenticate and retrieve JWT Bearer token
  */
+const tokenCache = {};
+
 export async function loginAs(username, password) {
+  if (tokenCache[username]) {
+    return tokenCache[username];
+  }
+
   const res = await apiRequest('/auth/login', {
     method: 'POST',
     body: { username, password }
@@ -85,11 +91,13 @@ export async function loginAs(username, password) {
     throw new Error(`Failed to login as ${username}: ${res.data?.error || res.status}`);
   }
 
-  return {
+  tokenCache[username] = {
     token: res.data.token,
     user: res.data.user,
     authHeader: { Authorization: `Bearer ${res.data.token}` }
   };
+
+  return tokenCache[username];
 }
 
 export async function getAdminAuth() {

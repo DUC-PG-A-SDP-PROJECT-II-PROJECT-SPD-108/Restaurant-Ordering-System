@@ -1,19 +1,43 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useCart } from '../context/CartContext';
+import { getTables } from '../services/api';
 
-const AVAILABLE_TABLES = [
-  { id: '01', name: 'Table 01', zone: 'Patio Terrace' },
-  { id: '02', name: 'Table 02', zone: 'Window View' },
-  { id: '03', name: 'Table 03', zone: 'Cozy Booth' },
-  { id: '04', name: 'Table 04', zone: 'Main Dining Hall' },
-  { id: '05', name: 'Table 05', zone: 'VIP Wine Lounge' },
-  { id: '06', name: 'Table 06', zone: 'Main Dining Hall' },
-  { id: '07', name: 'Table 07', zone: 'Patio Terrace' },
-  { id: '08', name: 'Table 08', zone: 'Chef Counter' }
+const DEFAULT_TABLES = [
+  { id: '01', name: 'Table 01', zone: 'Patio Terrace', status: 'available' },
+  { id: '02', name: 'Table 02', zone: 'Window View', status: 'available' },
+  { id: '03', name: 'Table 03', zone: 'Cozy Booth', status: 'available' },
+  { id: '04', name: 'Table 04', zone: 'Main Dining Hall', status: 'available' },
+  { id: '05', name: 'Table 05', zone: 'VIP Wine Lounge', status: 'available' },
+  { id: '06', name: 'Table 06', zone: 'Main Dining Hall', status: 'available' },
+  { id: '07', name: 'Table 07', zone: 'Patio Terrace', status: 'available' },
+  { id: '08', name: 'Table 08', zone: 'Chef Counter', status: 'available' }
 ];
 
 export default function TableSelector({ onChange }) {
   const { tableNumber, setTableNumber, isQrScanned } = useCart();
+  const [tables, setTables] = useState(DEFAULT_TABLES);
+
+  useEffect(() => {
+    let isMounted = true;
+    getTables()
+      .then((data) => {
+        if (isMounted && Array.isArray(data) && data.length > 0) {
+          setTables(
+            data.map((t) => ({
+              id: String(t.id).padStart(2, '0'),
+              name: t.name || `Table ${t.id}`,
+              zone: t.zone || 'Dining Area',
+              status: t.status || 'available'
+            }))
+          );
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const handleSelect = (e) => {
     const val = e.target.value;
@@ -43,9 +67,9 @@ export default function TableSelector({ onChange }) {
           cursor: 'pointer'
         }}
       >
-        {AVAILABLE_TABLES.map((t) => (
+        {tables.map((t) => (
           <option key={t.id} value={t.id}>
-            {t.name} ({t.zone})
+            {t.name} ({t.zone}){t.status === 'occupied' ? ' • Occupied' : ''}
           </option>
         ))}
       </select>

@@ -16,13 +16,16 @@ export {
   saveOrder,
   updateOrderStatus,
   getVouchers,
+  verifyVoucher,
   createVoucher,
   updateVoucher,
   deleteVoucher,
   getStaffUsers,
   createStaffUser,
   updateStaffUser,
-  deleteStaffUser
+  deleteStaffUser,
+  getTables,
+  updateTableStatus
 } from './api';
 
 const SUPABASE_URL =

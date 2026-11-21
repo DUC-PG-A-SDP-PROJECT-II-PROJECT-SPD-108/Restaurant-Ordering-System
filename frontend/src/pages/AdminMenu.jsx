@@ -16,10 +16,11 @@ import {
   getStaffUsers,
   createStaffUser,
   updateStaffUser,
-  deleteStaffUser
+  deleteStaffUser,
+  getTables
 } from '../services/supabaseClient';
 
-const RESTAURANT_TABLES = [
+const DEFAULT_RESTAURANT_TABLES = [
   { id: '01', name: 'Table 01', zone: 'Patio Terrace', capacity: 2 },
   { id: '02', name: 'Table 02', zone: 'Window View', capacity: 4 },
   { id: '03', name: 'Table 03', zone: 'Cozy Booth', capacity: 4 },
@@ -159,6 +160,30 @@ export default function AdminMenu({ onShowToast, onGoToCustomerWeb, theme, toggl
   const [categorySearchQuery, setCategorySearchQuery] = useState('');
   const [selectedTableForQr, setSelectedTableForQr] = useState('01');
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [restaurantTables, setRestaurantTables] = useState(DEFAULT_RESTAURANT_TABLES);
+
+  // Fetch dynamic restaurant tables from backend database
+  useEffect(() => {
+    let isMounted = true;
+    getTables()
+      .then((data) => {
+        if (isMounted && Array.isArray(data) && data.length > 0) {
+          setRestaurantTables(
+            data.map((t) => ({
+              id: String(t.id).padStart(2, '0'),
+              name: t.name || `Table ${t.id}`,
+              zone: t.zone || 'Dining Area',
+              capacity: Number(t.capacity) || 4,
+              status: t.status || 'available'
+            }))
+          );
+        }
+      })
+      .catch(() => {});
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // Vouchers state (synced with Customer Hero Banner)
   const [vouchers, setVouchers] = useState(() => {
@@ -548,9 +573,31 @@ export default function AdminMenu({ onShowToast, onGoToCustomerWeb, theme, toggl
     }
   };
 
+  const isDishInCategory = (dish, cat) => {
+    if (!dish || !cat) return false;
+    if (cat.id === 'all') return true;
+    const catSlug = String(cat.id || '').toLowerCase();
+    const catName = String(cat.name || '').toLowerCase();
+    const dishCat = String(dish.category || '').toLowerCase();
+    const dishCatName = String(dish.categoryName || '').toLowerCase();
+
+    return (
+      dishCat === catSlug ||
+      dishCat === catName ||
+      dishCatName === catName ||
+      dishCatName === catSlug ||
+      (cat.dbId && dish.categoryId === cat.dbId) ||
+      (cat.id && String(dish.categoryId) === String(cat.id))
+    );
+  };
+
   // Filter dishes
   const filteredDishes = dishes.filter((dish) => {
-    const matchesCat = selectedCategory === 'all' || dish.category === selectedCategory;
+    const selectedCatObj = categories.find(c => c.id === selectedCategory);
+    const matchesCat =
+      selectedCategory === 'all' ||
+      dish.category === selectedCategory ||
+      (selectedCatObj && isDishInCategory(dish, selectedCatObj));
     const matchesSearch =
       !searchQuery ||
       dish.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -669,7 +716,15 @@ export default function AdminMenu({ onShowToast, onGoToCustomerWeb, theme, toggl
 
   const getTableStatus = (tableNum) => {
     const activeOrder = getTableOrder(tableNum);
-    if (!activeOrder) return { status: 'available', label: 'Available', color: 'var(--accent)' };
+    if (!activeOrder) {
+      const dbTable = restaurantTables.find(t => String(t.id).padStart(2, '0') === String(tableNum).padStart(2, '0'));
+      if (dbTable && dbTable.status && dbTable.status !== 'available') {
+        if (dbTable.status === 'reserved') return { status: 'reserved', label: 'Reserved', color: '#f59e0b' };
+        if (dbTable.status === 'cleaning') return { status: 'cleaning', label: 'Cleaning', color: '#64748b' };
+        if (dbTable.status === 'occupied') return { status: 'occupied', label: 'Occupied', color: 'var(--warning)' };
+      }
+      return { status: 'available', label: 'Available', color: 'var(--accent)' };
+    }
     if (activeOrder.status === 'pending') return { status: 'pending', label: 'Order Pending', color: 'var(--warning)', order: activeOrder };
     if (activeOrder.status === 'cooking') return { status: 'cooking', label: 'Cooking in Kitchen', color: '#3b82f6', order: activeOrder };
     return { status: 'ready', label: 'Food Served', color: '#8b5cf6', order: activeOrder };
@@ -680,7 +735,7 @@ export default function AdminMenu({ onShowToast, onGoToCustomerWeb, theme, toggl
     return activeServiceRequests.find(r => r.tableNumber === String(tableNum).padStart(2, '0'));
   };
 
-  const occupiedTablesCount = RESTAURANT_TABLES.filter(t => getTableStatus(t.id).status !== 'available').length;
+  const occupiedTablesCount = restaurantTables.filter(t => getTableStatus(t.id).status !== 'available').length;
   const dineInCount = orders.filter(o => o.diningMode === 'dine-in').length;
   const takeoutCount = orders.filter(o => o.diningMode === 'takeout').length;
   const totalOrdersCount = orders.length;
@@ -1719,7 +1774,7 @@ export default function AdminMenu({ onShowToast, onGoToCustomerWeb, theme, toggl
                   </div>
 
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.6rem' }}>
-                    {RESTAURANT_TABLES.map((t) => {
+                    {restaurantTables.map((t) => {
                       const tInfo = getTableStatus(t.id);
                       return (
                         <div
@@ -2203,7 +2258,7 @@ export default function AdminMenu({ onShowToast, onGoToCustomerWeb, theme, toggl
               >
                 {filteredCategories.map((cat) => {
                   const isAll = cat.id === 'all';
-                  const catDishes = isAll ? dishes : dishes.filter(d => d.category === cat.id);
+                  const catDishes = isAll ? dishes : dishes.filter(d => isDishInCategory(d, cat));
 
                   return (
                     <div
@@ -2497,7 +2552,7 @@ export default function AdminMenu({ onShowToast, onGoToCustomerWeb, theme, toggl
                   gap: '1.25rem'
                 }}
               >
-                {RESTAURANT_TABLES.map((table) => {
+                {restaurantTables.map((table) => {
                   const tableInfo = getTableStatus(table.id);
                   const order = tableInfo.order;
                   const serviceCall = getTableServiceCall(table.id);
@@ -3002,7 +3057,7 @@ export default function AdminMenu({ onShowToast, onGoToCustomerWeb, theme, toggl
                 className="qr-table-selector-bar no-print"
                 style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}
               >
-                {RESTAURANT_TABLES.map((t) => (
+                {restaurantTables.map((t) => (
                   <button
                     key={t.id}
                     type="button"
@@ -3017,8 +3072,8 @@ export default function AdminMenu({ onShowToast, onGoToCustomerWeb, theme, toggl
               {/* Placard Container (Printable) */}
               <div className="qr-placards-print-wrapper">
                 {qrPrintAll ? (
-                  // Print all 8 table cards (one per page)
-                  RESTAURANT_TABLES.map((table) => (
+                  // Print all table cards (one per page)
+                  restaurantTables.map((table) => (
                     <div
                       key={table.id}
                       className="qr-placard-printable"
@@ -3115,7 +3170,7 @@ export default function AdminMenu({ onShowToast, onGoToCustomerWeb, theme, toggl
                 ) : (
                   // Print single active table card
                   (() => {
-                    const currentTable = RESTAURANT_TABLES.find(t => t.id === selectedTableForQr) || RESTAURANT_TABLES[0];
+                    const currentTable = restaurantTables.find(t => t.id === selectedTableForQr) || restaurantTables[0];
                     return (
                       <div
                         className="qr-placard-printable"

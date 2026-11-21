@@ -36,10 +36,10 @@ export function createVoucher(req, res) {
 
     const cleanCode = code.trim().toUpperCase();
     const stmt = db.prepare(`
-      INSERT INTO vouchers (code, discountPercent, description, isActive)
-      VALUES (?, ?, ?, ?)
+      INSERT INTO vouchers (code, discountPercent, description, isActive, isFeatured)
+      VALUES (?, ?, ?, ?, ?)
     `);
-    const result = stmt.run(cleanCode, Number(discountPercent), description, isActive ? 1 : 0);
+    const result = stmt.run(cleanCode, Number(discountPercent), description, isActive ? 1 : 0, isFeatured ? 1 : 0);
 
     res.status(201).json({
       id: result.lastInsertRowid,
@@ -73,12 +73,13 @@ export function updateVoucher(req, res) {
     const newDiscount = discountPercent !== undefined ? Number(discountPercent) : existing.discountPercent;
     const newDesc = description !== undefined ? description : existing.description;
     const newActive = isActive !== undefined ? (isActive ? 1 : 0) : existing.isActive;
+    const newFeatured = isFeatured !== undefined ? (isFeatured ? 1 : 0) : (existing.isFeatured || 0);
 
     db.prepare(`
       UPDATE vouchers
-      SET code = ?, discountPercent = ?, description = ?, isActive = ?
+      SET code = ?, discountPercent = ?, description = ?, isActive = ?, isFeatured = ?
       WHERE id = ?
-    `).run(newCode, newDiscount, newDesc, newActive, id);
+    `).run(newCode, newDiscount, newDesc, newActive, newFeatured, id);
 
     res.json({
       id: Number(id),
@@ -86,11 +87,47 @@ export function updateVoucher(req, res) {
       discountPercent: newDiscount,
       description: newDesc,
       isActive: Boolean(newActive),
-      isFeatured: Boolean(isFeatured !== undefined ? isFeatured : existing.isFeatured)
+      isFeatured: Boolean(newFeatured)
     });
   } catch (error) {
     console.error('updateVoucher error:', error);
     res.status(500).json({ error: 'Failed to update voucher' });
+  }
+}
+
+/**
+ * Verify promo / voucher code against live SQLite vouchers table
+ * POST /api/vouchers/verify
+ */
+export function verifyVoucher(req, res) {
+  try {
+    const { code } = req.body;
+    if (!code) {
+      return res.status(400).json({ valid: false, error: 'Promo code is required' });
+    }
+
+    const cleanCode = code.trim().toUpperCase();
+
+    // Query active voucher from SQLite vouchers table
+    const voucher = db.prepare(`
+      SELECT code, discountPercent, description, isActive
+      FROM vouchers
+      WHERE UPPER(code) = ?
+    `).get(cleanCode);
+
+    if (voucher && voucher.isActive) {
+      return res.json({
+        valid: true,
+        code: voucher.code,
+        discountPercent: Number(voucher.discountPercent),
+        description: voucher.description
+      });
+    }
+
+    res.status(404).json({ valid: false, error: 'Invalid or expired voucher code' });
+  } catch (error) {
+    console.error('verifyVoucher error:', error);
+    res.status(500).json({ error: 'Failed to verify voucher' });
   }
 }
 
