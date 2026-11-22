@@ -56,6 +56,15 @@ export default function Navbar({ currentView, setCurrentView, theme, toggleTheme
             <i className="fa-solid fa-book-open"></i> <span>{t('menuOrder')}</span>
           </button>
           <button
+            className={`nav-tab ${currentView === 'cart-view' ? 'active' : ''}`}
+            onClick={() => setCurrentView('cart-view')}
+          >
+            <i className="fa-solid fa-cart-shopping"></i> <span>{language === 'kh' ? 'កន្ត្រក' : 'Cart'}</span>
+            {summary.itemCount > 0 && (
+              <span className="badge active-orders-badge" style={{ background: 'var(--primary)' }}>{summary.itemCount}</span>
+            )}
+          </button>
+          <button
             className={`nav-tab ${currentView === 'tracker-view' ? 'active' : ''}`}
             onClick={() => setCurrentView('tracker-view')}
           >
@@ -68,44 +77,30 @@ export default function Navbar({ currentView, setCurrentView, theme, toggleTheme
 
         {/* Right Header Actions */}
         <div className="nav-actions">
-          {/* Customer Dining Mode Selector */}
-          <div className="dining-mode-selector" id="dining-mode-container">
-            <button
-              className={`mode-pill ${diningMode === 'dine-in' ? 'active' : ''}`}
-              onClick={() => setDiningMode('dine-in')}
-            >
-              <i className="fa-solid fa-champagne-glasses"></i> {t('dineIn')}
-            </button>
-            <button
-              className={`mode-pill ${diningMode === 'takeout' ? 'active' : ''}`}
-              onClick={() => setDiningMode('takeout')}
-            >
-              <i className="fa-solid fa-bag-shopping"></i> {t('takeaway')}
-            </button>
-          </div>
-
           {/* Language Switcher Pill (Khmer / English) */}
           <button
             type="button"
-            className="icon-button"
+            className="icon-button lang-switcher-btn"
             onClick={toggleLanguage}
             title={language === 'en' ? 'ប្តូរទៅភាសាខ្មែរ (Switch to Khmer)' : 'Switch to English'}
             style={{
-              fontWeight: 800,
-              fontSize: '0.78rem',
+              fontWeight: 700,
+              fontSize: '0.85rem',
               display: 'inline-flex',
               alignItems: 'center',
-              gap: '4px',
+              justifyContent: 'center',
+              minWidth: '44px',
               padding: '0 10px',
-              width: 'auto',
+              height: '36px',
               borderRadius: 'var(--radius-full)',
               background: 'var(--bg-subtle)',
               border: '1px solid var(--border-color)',
               color: 'var(--text-main)',
-              cursor: 'pointer'
+              cursor: 'pointer',
+              transition: 'all 0.2s ease'
             }}
           >
-            <span>{language === 'en' ? '🇰🇭 ខ្មែរ' : '🇬🇧 EN'}</span>
+            <span>{language === 'en' ? 'ខ្មែរ' : 'EN'}</span>
           </button>
 
           {/* Call Staff Button (Customer Portal) */}
@@ -132,12 +127,12 @@ export default function Navbar({ currentView, setCurrentView, theme, toggleTheme
             <i className={theme === 'dark' ? 'fa-solid fa-sun' : 'fa-solid fa-moon'}></i>
           </button>
 
-          {/* Customer Cart Trigger */}
+          {/* Customer Cart Trigger (Pic 4) */}
           <button
             className="cart-trigger-btn"
             id="open-cart-btn"
             aria-label="Open Shopping Cart"
-            onClick={onOpenCart}
+            onClick={() => setCurrentView('cart-view')}
           >
             <div className="cart-icon-wrapper">
               <i className="fa-solid fa-cart-shopping"></i>

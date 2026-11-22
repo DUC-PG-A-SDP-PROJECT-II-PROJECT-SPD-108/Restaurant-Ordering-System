@@ -37,6 +37,9 @@ backend/data/*.db*
 # Local database configuration & documentation scratch
 database-config/
 
+# Task tracking & planning documentation
+task/
+
 # Operating System Files
 .DS_Store
 Thumbs.db

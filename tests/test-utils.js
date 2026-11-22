@@ -4,7 +4,7 @@
  */
 import assert from 'node:assert';
 
-export const API_BASE = process.env.API_URL || 'http://localhost:5050/api';
+export const API_BASE = process.env.API_URL || 'http://127.0.0.1:5050/api';
 
 // ANSI Colors for Terminal
 export const colors = {

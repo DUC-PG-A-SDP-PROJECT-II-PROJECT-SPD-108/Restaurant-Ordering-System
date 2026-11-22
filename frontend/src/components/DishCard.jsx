@@ -62,7 +62,7 @@ export default function DishCard({ dish, onOpenCustomizer, onShowToast }) {
 
       <div className="dish-content">
         <div className="dish-header">
-          <h3 className="dish-title">{dish.name}</h3>
+          <h3 className="dish-title" title={dish.name}>{dish.name}</h3>
           <span className="dish-price">${Number(dish.price).toFixed(2)}</span>
         </div>
 

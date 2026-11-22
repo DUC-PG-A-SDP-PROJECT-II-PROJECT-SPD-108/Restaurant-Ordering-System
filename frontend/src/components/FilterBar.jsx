@@ -10,27 +10,46 @@ export default function FilterBar({
 }) {
   return (
     <div className="menu-control-bar">
-      {/* Search Bar */}
-      <div className="search-input-wrapper">
-        <i className="fa-solid fa-magnifying-glass search-icon"></i>
-        <input
-          type="text"
-          id="menu-search-input"
-          placeholder="Search dishes, ingredients, drinks..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          autoComplete="off"
-        />
-        {searchQuery && (
-          <button
-            className="clear-search-btn"
-            id="clear-search-btn"
-            onClick={() => setSearchQuery('')}
-            title="Clear search"
+      <div className="search-sort-row">
+        {/* Search Bar */}
+        <div className="search-input-wrapper">
+          <i className="fa-solid fa-magnifying-glass search-icon"></i>
+          <input
+            type="text"
+            id="menu-search-input"
+            placeholder="Search dishes, ingredients, drinks..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            autoComplete="off"
+          />
+          {searchQuery && (
+            <button
+              className="clear-search-btn"
+              id="clear-search-btn"
+              onClick={() => setSearchQuery('')}
+              title="Clear search"
+            >
+              <i className="fa-solid fa-xmark"></i>
+            </button>
+          )}
+        </div>
+
+        {/* Sort Selector */}
+        <div className="sort-selector-wrapper">
+          <label htmlFor="menu-sort-select" className="sort-label">
+            <i className="fa-solid fa-arrow-down-short-wide"></i> <span className="sort-label-text">Sort:</span>
+          </label>
+          <select
+            id="menu-sort-select"
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
           >
-            <i className="fa-solid fa-xmark"></i>
-          </button>
-        )}
+            <option value="featured">Featured First</option>
+            <option value="price-low">Price: Low to High</option>
+            <option value="price-high">Price: High to Low</option>
+            <option value="rating">Highest Rated</option>
+          </select>
+        </div>
       </div>
 
       {/* Dietary Filter Chips */}
@@ -59,23 +78,6 @@ export default function FilterBar({
         >
           <i className="fa-solid fa-star"></i> Chef's Pick
         </button>
-      </div>
-
-      {/* Sort Selector */}
-      <div className="sort-selector-wrapper">
-        <label htmlFor="menu-sort-select">
-          <i className="fa-solid fa-arrow-down-short-wide"></i> Sort:
-        </label>
-        <select
-          id="menu-sort-select"
-          value={sortBy}
-          onChange={(e) => setSortBy(e.target.value)}
-        >
-          <option value="featured">Featured First</option>
-          <option value="price-low">Price: Low to High</option>
-          <option value="price-high">Price: High to Low</option>
-          <option value="rating">Highest Rated</option>
-        </select>
       </div>
     </div>
   );

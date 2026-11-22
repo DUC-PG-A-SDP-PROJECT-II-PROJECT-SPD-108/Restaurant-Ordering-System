@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { parseUtcDate } from '../utils/date';
 
 export default function OrderReceiptModal({
   order,
@@ -146,7 +147,7 @@ export default function OrderReceiptModal({
               {order.id}
             </div>
             <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-              {new Date(order.timestamp).toLocaleString()}
+              {parseUtcDate(order.timestamp).toLocaleString()}
             </div>
           </div>
 

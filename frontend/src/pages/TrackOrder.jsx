@@ -1,18 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useOrders } from '../context/OrderContext';
-
-function formatTimeAgo(timestamp) {
-  try {
-    const elapsedMinutes = Math.floor((Date.now() - new Date(timestamp).getTime()) / 60000);
-    if (elapsedMinutes < 1) return 'Just now';
-    if (elapsedMinutes === 1) return '1 min ago';
-    if (elapsedMinutes < 60) return `${elapsedMinutes} mins ago`;
-    const hours = Math.floor(elapsedMinutes / 60);
-    return `${hours} hr${hours > 1 ? 's' : ''} ago`;
-  } catch (e) {
-    return 'Recently';
-  }
-}
+import { formatTimeAgo, parseUtcDate } from '../utils/date';
 
 export default function TrackOrder({ onGoToMenu, onShowToast }) {
   const { orders, activeOrderId, setActiveOrderId } = useOrders();
@@ -84,10 +72,10 @@ export default function TrackOrder({ onGoToMenu, onShowToast }) {
                   </span>
                 </div>
                 <div className="order-card-meta">
-                  <span>
+                  <span className="order-card-items-price">
                     {ord.items.length} items &bull; ${ord.total.toFixed(2)}
                   </span>
-                  <span>{formatTimeAgo(ord.timestamp)}</span>
+                  <span className="order-card-time-ago">{formatTimeAgo(ord.timestamp)}</span>
                 </div>
               </div>
             );
@@ -114,26 +102,12 @@ export default function TrackOrder({ onGoToMenu, onShowToast }) {
             </div>
           ) : (
             <div className="tracker-card-content" id="tracker-active-content">
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  borderBottom: '1px solid var(--border-color)',
-                  paddingBottom: '1rem'
-                }}
-              >
+              <div className="tracker-active-header">
                 <div>
-                  <span
-                    style={{
-                      fontSize: '0.8rem',
-                      color: 'var(--text-muted)',
-                      fontWeight: 700
-                    }}
-                  >
+                  <span className="tracker-header-subtitle">
                     ORDER TRACKING
                   </span>
-                  <h2 style={{ fontSize: '1.6rem', color: 'var(--primary)' }}>
+                  <h2 className="tracker-header-order-id">
                     {activeOrder.id}
                   </h2>
                 </div>
@@ -144,15 +118,9 @@ export default function TrackOrder({ onGoToMenu, onShowToast }) {
                   >
                     {activeOrder.status.toUpperCase()}
                   </span>
-                  <div
-                    style={{
-                      fontSize: '0.78rem',
-                      color: 'var(--text-muted)',
-                      marginTop: '4px'
-                    }}
-                  >
+                  <div className="tracker-header-placed-time">
                     Placed:{' '}
-                    {new Date(activeOrder.timestamp).toLocaleTimeString([], {
+                    {parseUtcDate(activeOrder.timestamp).toLocaleTimeString([], {
                       hour: '2-digit',
                       minute: '2-digit'
                     })}
@@ -162,10 +130,12 @@ export default function TrackOrder({ onGoToMenu, onShowToast }) {
 
               {/* Timeline Stepper */}
               <div className="tracker-progress-stepper">
-                <div
-                  className="stepper-progress-fill"
-                  style={{ width: `${progressPercent}%` }}
-                ></div>
+                <div className="stepper-progress-track">
+                  <div
+                    className="stepper-progress-fill"
+                    style={{ width: `${progressPercent}%` }}
+                  ></div>
+                </div>
 
                 <div
                   className={`step-node ${currentStep >= 1 ? 'completed' : ''} ${
@@ -217,64 +187,98 @@ export default function TrackOrder({ onGoToMenu, onShowToast }) {
               {/* Order Details Summary */}
               <div className="tracker-receipt-summary">
                 <div
+                  className="tracker-guest-table-header"
                   style={{
                     display: 'flex',
                     justifyContent: 'space-between',
+                    alignItems: 'center',
                     fontWeight: 700,
-                    marginBottom: '0.75rem'
+                    fontSize: '0.86rem',
+                    marginBottom: '0.75rem',
+                    borderBottom: '1px solid var(--border-color)',
+                    paddingBottom: '0.5rem'
                   }}
                 >
-                  <span>Guest: {activeOrder.customerName}</span>
-                  <span>
+                  <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginRight: '0.5rem' }}>
+                    Guest: <strong>{activeOrder.customerName}</strong>
+                  </span>
+                  <span
+                    style={{
+                      whiteSpace: 'nowrap',
+                      flexShrink: 0,
+                      background: 'rgba(245, 158, 11, 0.12)',
+                      color: 'var(--primary)',
+                      padding: '2px 8px',
+                      borderRadius: 'var(--radius-full)',
+                      fontSize: '0.78rem',
+                      fontWeight: 700
+                    }}
+                  >
                     {activeOrder.diningMode === 'dine-in'
                       ? `Table #${activeOrder.tableNumber}`
-                      : 'Takeaway Pickup'}
+                      : 'Takeaway'}
                   </span>
                 </div>
 
-                <table className="tracker-items-table">
-                  <thead>
-                    <tr>
-                      <th>Dish</th>
-                      <th>Spice / Options</th>
-                      <th>Qty</th>
-                      <th>Total</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {activeOrder.items.map((item, idx) => (
-                      <tr key={idx}>
-                        <td>
-                          <strong>{item.name}</strong>
-                        </td>
-                        <td>
-                          {item.spiceLevel || 'Standard'}{' '}
-                          {item.addOns && item.addOns.length > 0 && (
-                            <>
-                              <br />
-                              <small>+{item.addOns.join(', ')}</small>
-                            </>
-                          )}
-                        </td>
-                        <td>{item.quantity}</td>
-                        <td>${(item.price * item.quantity).toFixed(2)}</td>
+                {/* Responsive Receipt Items Display */}
+                <div className="tracker-items-container">
+                  {/* Desktop Table View */}
+                  <table className="tracker-items-table desktop-only-table">
+                    <thead>
+                      <tr>
+                        <th>Dish</th>
+                        <th>Spice / Options</th>
+                        <th>Qty</th>
+                        <th>Total</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {activeOrder.items.map((item, idx) => (
+                        <tr key={idx}>
+                          <td>
+                            <strong>{item.name}</strong>
+                          </td>
+                          <td>
+                            {item.spiceLevel || 'Standard'}{' '}
+                            {item.addOns && item.addOns.length > 0 && (
+                              <>
+                                <br />
+                                <small>+{item.addOns.join(', ')}</small>
+                              </>
+                            )}
+                          </td>
+                          <td>{item.quantity}</td>
+                          <td>${(item.price * item.quantity).toFixed(2)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
 
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    fontWeight: 800,
-                    fontSize: '1.15rem',
-                    marginTop: '1.25rem',
-                    color: 'var(--text-main)'
-                  }}
-                >
+                  {/* Mobile Clean Receipt Rows View */}
+                  <div className="tracker-items-mobile-list">
+                    {activeOrder.items.map((item, idx) => (
+                      <div key={idx} className="tracker-mobile-item-row">
+                        <div className="tracker-mobile-item-info">
+                          <strong className="tracker-mobile-item-name">{item.name}</strong>
+                          <div className="tracker-mobile-item-sub">
+                            <span>{item.spiceLevel || 'Standard'}</span>
+                            {item.addOns && item.addOns.length > 0 && (
+                              <span> &bull; +{item.addOns.join(', ')}</span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="tracker-mobile-item-price-col">
+                          <span className="tracker-mobile-item-qty">&times;{item.quantity}</span>
+                          <span className="tracker-mobile-item-total">${(item.price * item.quantity).toFixed(2)}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="tracker-total-bill-row">
                   <span>Total Bill:</span>
-                  <span style={{ color: 'var(--primary)' }}>
+                  <span className="tracker-total-bill-amount" style={{ color: '#FF5900', fontWeight: 800 }}>
                     ${activeOrder.total.toFixed(2)}
                   </span>
                 </div>

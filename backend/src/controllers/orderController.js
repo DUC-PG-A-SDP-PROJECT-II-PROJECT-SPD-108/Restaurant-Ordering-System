@@ -38,6 +38,27 @@ export function broadcastOrderEvent(event, data) {
 }
 
 /**
+ * Normalizes SQLite UTC timestamps ("YYYY-MM-DD HH:MM:SS") into valid ISO-8601 with "Z"
+ */
+function formatIsoUtc(dateStr) {
+  if (!dateStr) return new Date().toISOString();
+  if (typeof dateStr === 'string') {
+    const trimmed = dateStr.trim();
+    if (!trimmed.endsWith('Z') && !trimmed.includes('+') && !trimmed.includes('T')) {
+      const fixed = trimmed.replace(' ', 'T') + 'Z';
+      const parsed = new Date(fixed);
+      if (!isNaN(parsed.getTime())) return parsed.toISOString();
+    } else if (!trimmed.endsWith('Z') && !trimmed.includes('+') && trimmed.includes('T')) {
+      const fixed = trimmed + 'Z';
+      const parsed = new Date(fixed);
+      if (!isNaN(parsed.getTime())) return parsed.toISOString();
+    }
+  }
+  const parsed = new Date(dateStr);
+  return !isNaN(parsed.getTime()) ? parsed.toISOString() : new Date().toISOString();
+}
+
+/**
  * Helper to resolve dish from menu_items by id, 'dish-X', or dish name
  */
 function resolveDish(it) {
@@ -225,6 +246,8 @@ export function createOrder(req, res) {
       status: 'pending'
     });
 
+    const nowIso = new Date().toISOString();
+
     res.status(201).json({
       message: 'Order placed successfully',
       id: finalOrderCode,
@@ -237,7 +260,9 @@ export function createOrder(req, res) {
       voucherCode: appliedVoucherCode,
       tax,
       serviceFee,
-      totalAmount
+      totalAmount,
+      createdAt: nowIso,
+      timestamp: nowIso
     });
   } catch (error) {
     console.error('createOrder error:', error);
@@ -333,8 +358,9 @@ export function getOrders(req, res) {
         serviceFee: Number(ord.serviceFee != null && ord.serviceFee > 0 ? ord.serviceFee : (ord.totalAmount * 0.05).toFixed(2)),
         specialNotes: ord.customerNotes || '',
         customerNotes: ord.customerNotes || '',
-        timestamp: ord.createdAt || new Date().toISOString(),
-        createdAt: ord.createdAt || new Date().toISOString(),
+        timestamp: formatIsoUtc(ord.createdAt),
+        createdAt: formatIsoUtc(ord.createdAt),
+        updatedAt: formatIsoUtc(ord.updatedAt || ord.createdAt),
         items: itemsList
       };
     });
@@ -391,6 +417,8 @@ export function getOrderById(req, res) {
     if (order.status === 'completed' || order.status === 'delivered') normalizedStatus = 'served';
 
     const code = order.orderCode || `ORD-${1000 + order.id}`;
+    const isoCreated = formatIsoUtc(order.createdAt);
+    const isoUpdated = formatIsoUtc(order.updatedAt || order.createdAt);
 
     res.json({
       ...order,
@@ -408,6 +436,9 @@ export function getOrderById(req, res) {
       promoCode: order.voucherCode || null,
       tax: Number(order.tax != null && order.tax > 0 ? order.tax : (order.totalAmount * 0.10).toFixed(2)),
       serviceFee: Number(order.serviceFee != null && order.serviceFee > 0 ? order.serviceFee : (order.totalAmount * 0.05).toFixed(2)),
+      createdAt: isoCreated,
+      timestamp: isoCreated,
+      updatedAt: isoUpdated,
       items: getItems.all(order.id)
     });
   } catch (error) {
@@ -525,7 +556,7 @@ export function getOrderReceipt(req, res) {
       },
       invoice: {
         orderCode,
-        dateTime: targetOrder.createdAt,
+        dateTime: formatIsoUtc(targetOrder.createdAt),
         diningMode: (targetOrder.orderType || 'dine_in').toUpperCase(),
         tableNumber: targetOrder.tableNumber ? `Table ${targetOrder.tableNumber}` : 'N/A',
         guestName: targetOrder.customerName || 'Valued Guest',

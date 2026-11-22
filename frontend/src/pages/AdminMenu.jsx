@@ -9,6 +9,7 @@ import OrderReceiptModal from '../components/OrderReceiptModal';
 import ConfirmDialog from '../components/ConfirmDialog';
 import KitchenDashboard from './KitchenDashboard';
 import StaffFormModal from '../components/StaffFormModal';
+import { parseUtcDate } from '../utils/date';
 import {
   getVouchers,
   updateVoucher as apiUpdateVoucher,
@@ -430,7 +431,7 @@ export default function AdminMenu({ onShowToast, onGoToCustomerWeb, theme, toggl
     ];
 
     const rows = ordersToExport.map((o) => {
-      const d = o.timestamp ? new Date(o.timestamp) : new Date();
+      const d = o.timestamp ? parseUtcDate(o.timestamp) : new Date();
       const itemsList = (o.items || []).map(i => `${i.quantity || 1}x ${i.name || ''}`).join('; ');
       return [
         o.id || '',
@@ -3277,7 +3278,7 @@ export default function AdminMenu({ onShowToast, onGoToCustomerWeb, theme, toggl
             // Filter orders by date range
             const filteredSalesOrders = orders.filter((o) => {
               if (!o.timestamp) return true;
-              const orderDate = new Date(o.timestamp);
+              const orderDate = parseUtcDate(o.timestamp);
               const now = new Date();
               if (salesDateFilter === 'today') {
                 return (
@@ -3758,7 +3759,7 @@ export default function AdminMenu({ onShowToast, onGoToCustomerWeb, theme, toggl
                                 {o.id}
                               </td>
                               <td style={{ padding: '0.75rem 1rem', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                                {new Date(o.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                {parseUtcDate(o.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                               </td>
                               <td style={{ padding: '0.75rem 1rem', fontWeight: 600 }}>
                                 {o.customerName || 'Walk-in'}
