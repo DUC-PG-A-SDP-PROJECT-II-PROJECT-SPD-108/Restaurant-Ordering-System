@@ -6,8 +6,10 @@ import { CartProvider } from './context/CartContext';
 import { OrderProvider } from './context/OrderContext';
 import { LanguageProvider } from './context/LanguageContext';
 import Navbar from './components/Navbar';
+import BottomNavBar from './components/BottomNavBar';
 import CustomerMenu from './pages/CustomerMenu';
 import TrackOrder from './pages/TrackOrder';
+import CartPage from './pages/CartPage';
 import AdminMenu from './pages/AdminMenu';
 import Login from './pages/Login';
 import CheckoutModal from './components/CheckoutModal';
@@ -42,7 +44,7 @@ function CustomerPortal({ showToast, theme, toggleTheme }) {
         setCurrentView={setCurrentView}
         theme={theme}
         toggleTheme={toggleTheme}
-        onOpenCart={() => setIsMobileCartOpen(true)}
+        onOpenCart={() => setCurrentView('cart-view')}
         onOpenCallWaiter={() => setIsCallWaiterOpen(true)}
       />
 
@@ -51,9 +53,10 @@ function CustomerPortal({ showToast, theme, toggleTheme }) {
         {currentView === 'customer-view' && (
           <CustomerMenu
             onOpenCheckout={() => setIsCheckoutOpen(true)}
+            onViewCart={() => setCurrentView('cart-view')}
             onShowToast={showToast}
             isMobileCartOpen={isMobileCartOpen}
-            onOpenMobileCart={() => setIsMobileCartOpen(true)}
+            onOpenMobileCart={() => setCurrentView('cart-view')}
             onCloseMobileCart={() => setIsMobileCartOpen(false)}
           />
         )}
@@ -64,42 +67,21 @@ function CustomerPortal({ showToast, theme, toggleTheme }) {
             onShowToast={showToast}
           />
         )}
+
+        {currentView === 'cart-view' && (
+          <CartPage
+            onOpenCheckout={() => setIsCheckoutOpen(true)}
+            onGoToMenu={() => setCurrentView('customer-view')}
+            onShowToast={showToast}
+          />
+        )}
       </main>
 
-      {/* Floating Call Waiter Quick Button for Diners */}
-      <div
-        style={{
-          position: 'fixed',
-          bottom: '22px',
-          left: '20px',
-          zIndex: 85
-        }}
-      >
-        <button
-          type="button"
-          onClick={() => setIsCallWaiterOpen(true)}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '0.6rem',
-            padding: '9px 16px',
-            borderRadius: 'var(--radius-full)',
-            background: 'linear-gradient(135deg, #f59e0b, #d97706)',
-            color: '#ffffff',
-            border: 'none',
-            boxShadow: '0 4px 18px rgba(245, 158, 11, 0.45)',
-            cursor: 'pointer',
-            fontWeight: 800,
-            fontSize: '0.84rem',
-            transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
-            letterSpacing: '0.3px'
-          }}
-          title="Call Waiter & Table Service Assistance"
-        >
-          <i className="fa-solid fa-bell-concierge" style={{ fontSize: '1.05rem' }}></i>
-          <span>Call Staff &bull; ហៅបុគ្គលិក</span>
-        </button>
-      </div>
+      {/* Mobile Bottom Navigation Bar (Visible on phone/tablet screens) */}
+      <BottomNavBar
+        currentView={currentView}
+        setCurrentView={setCurrentView}
+      />
 
       {/* Table Service Call Waiter Modal */}
       <CallWaiterModal

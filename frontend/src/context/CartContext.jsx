@@ -223,6 +223,14 @@ export function CartProvider({ children }) {
     setItems(prevItems => prevItems.filter(i => i.itemKey !== itemKey));
   };
 
+  const updateItemDiningType = (itemKey, diningType) => {
+    setItems(prevItems =>
+      prevItems.map(item =>
+        item.itemKey === itemKey ? { ...item, diningType } : item
+      )
+    );
+  };
+
   const clearCart = () => {
     setItems([]);
   };
@@ -315,6 +323,7 @@ export function CartProvider({ children }) {
         addItem,
         updateQuantity,
         removeItem,
+        updateItemDiningType,
         clearCart,
         applyPromoCode,
         removePromoCode

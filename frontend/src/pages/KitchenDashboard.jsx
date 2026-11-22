@@ -1,28 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useOrders } from '../context/OrderContext';
 import { playAudioAlert } from '../utils/audio';
+import { formatTimeAgo, getElapsedMinutes } from '../utils/date';
 import OrderReceiptModal from '../components/OrderReceiptModal';
-
-function getElapsedMinutes(timestamp) {
-  try {
-    return Math.floor((Date.now() - new Date(timestamp).getTime()) / 60000);
-  } catch (e) {
-    return 0;
-  }
-}
-
-function formatTimeAgo(timestamp) {
-  try {
-    const elapsedMinutes = getElapsedMinutes(timestamp);
-    if (elapsedMinutes < 1) return 'Just now';
-    if (elapsedMinutes === 1) return '1 min ago';
-    if (elapsedMinutes < 60) return `${elapsedMinutes} mins ago`;
-    const hours = Math.floor(elapsedMinutes / 60);
-    return `${hours} hr${hours > 1 ? 's' : ''} ago`;
-  } catch (e) {
-    return 'Recently';
-  }
-}
 
 export default function KitchenDashboard({ onShowToast }) {
   const { orders, kdsStats, updateOrderStatus, simulateDemoOrder } = useOrders();

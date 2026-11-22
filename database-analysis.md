@@ -1,6 +1,6 @@
 # 📊 Restaurant Ordering System (Aura Bistro) - Comprehensive Database Architecture & Specification
 
-ឯកសារមេនេះ (**Single Source of Truth**) ផ្តល់នូវព័ត៌មានលម្អិតស៊ីជម្រៅបំផុតអំពី**ស្ថាបត្យកម្មប្រព័ន្ធទិន្នន័យ (Database Architecture)**, **ដ្យាក្រាមទំនាក់ទំនងទិន្នន័យពិត (Re-designed ERD)**, **រចនាសម្ព័ន្ធតារាងទាំង ៧ តាមស្តង់ដារ SQL អន្តរជាតិ [ឈ្មោះនៅមុខ ឆ្វេង ➔ ប្រភេទនៅក្រោយ ស្តាំ]**, **គោលដៅ និងតួនាទីនៃទិន្នន័យ (Data Goals)**, **ដែនកំណត់ទិន្នន័យ (Data Constraints & Engine Limitations)**, **វដ្តជីវិតទិន្នន័យ (Order & Table Lifecycles)**, ព្រមទាំង**ប្រវត្តិនៃការដោះស្រាយបញ្ហាទាំង ១១ ចំណុច និងការកែលម្អកម្រិតខ្ពស់ v3.0 (Test Passing 51/51)** នៅក្នុងគម្រោង **Restaurant Ordering System (ROS)**។
+ឯកសារមេនេះ (**Single Source of Truth**) ផ្តល់នូវព័ត៌មានលម្អិតស៊ីជម្រៅបំផុតអំពី**ស្ថាបត្យកម្មប្រព័ន្ធទិន្នន័យ (Database Architecture)**, **ដ្យាក្រាមទំនាក់ទំនងទិន្នន័យពិត (Re-designed ERD)**, **រចនាសម្ព័ន្ធតារាងទាំង ៧ តាមស្តង់ដារ SQL អន្តរជាតិ [ឈ្មោះនៅមុខ ឆ្វេង ➔ ប្រភេទនៅក្រោយ ស្តាំ]**, **គោលដៅ និងតួនាទីនៃទិន្នន័យ (Data Goals)**, **ដែនកំណត់ទិន្នន័យ និងសមត្ថភាពផ្ទុក (Data Constraints & Practical Capacity)**, **វដ្តជីវិតទិន្នន័យ (Order & Table Lifecycles)**, ព្រមទាំង**ការផ្សារភ្ជាប់រវាងកូដ និងប្រព័ន្ធទិន្នន័យ (Feature & Code Mapping)** នៅក្នុងគម្រោង **Restaurant Ordering System (ROS)**។
 
 ---
 
@@ -13,9 +13,6 @@
 6. [វដ្តជីវិតនៃទិន្នន័យស្នូល (Core Data Lifecycles)](#6-វដ្តជីវិតនៃទិន្នន័យស្នូល)
 7. [ការផ្សារភ្ជាប់រវាងកូដ និង Database (Feature & Code Mapping)](#7-ការផ្សារភ្ជាប់រវាងកូដ-និង-database)
 8. [ការត្រួតពិនិត្យស៊ីជម្រៅលើលំហូរ Checkout & Promo Discounts](#8-ការត្រួតពិនិត្យស៊ីជម្រៅលើលំហូរ-checkout--promo-discounts)
-9. [បញ្ជីបញ្ហាទាំង ១១ ចំណុចដែលបានដោះស្រាយរួច (Resolved Issues)](#9-បញ្ជីបញ្ហាទាំង-១១-ចំណុចដែលបានដោះស្រាយរួច)
-10. [ការកែលម្អកម្រិតខ្ពស់បន្ថែម (Advanced Improvements v3.0 - បានបញ្ចប់)](#10-ការកែលម្អកម្រិតខ្ពស់បន្ថែម)
-11. [លទ្ធផលតេស្តស្វ័យប្រវត្តិ (Automated Test Suite: 51/51 Passed)](#11-លទ្ធផលតេស្តស្វ័យប្រវត្តិ)
 
 ---
 
@@ -495,59 +492,6 @@ stateDiagram-v2
    - នៅពេលទំព័រ Track Order ទាញទិន្នន័យពី Backend មកវិញ វិក្កយបត្ររបស់ភ្ញៀវបង្ហាញតម្លៃពេញ **\$115.00** ជំនួសឱ្យតម្លៃបញ្ចុះ **\$86.25**!
 
 👉 **ដំណោះស្រាយដែលបានអនុវត្ត:** `saveOrder` ត្រូវបានកែប្រែឱ្យបញ្ជូន `voucherCode`, `discountAmount`, `subtotal`, `tax`, `serviceFee`, `totalAmount` ហើយ `createOrder` ធ្វើការផ្ទៀងផ្ទាត់ និងកត់ត្រាតម្លៃហិរញ្ញវត្ថុពិតប្រាកដចូលក្នុង SQLite Database។
-
----
-
-## 9. បញ្ជីបញ្ហាទាំង ១១ ចំណុចដែលបានដោះស្រាយរួច (Resolved Issues)
-
-| # | កម្រិតធ្ងន់ធ្ងរ | ឈ្មោះបញ្ហា | ស្ថានភាព (Status) | ការដោះស្រាយជាក់ស្តែង (Resolution) |
-| :- | :--- | :--- | :--- | :--- |
-| **1** | 🔴 Critical | **Voucher Deactivation Bypass** | ✅ **RESOLVED** | លុប Hardcoded `PROMO_CODES` ចោលទាំងស្រុង។ បច្ចុប្បន្នផ្ទៀងផ្ទាត់លើ SQLite ផ្ទាល់ បើ `isActive = 0` គឺ Return 404/400 ភ្លាម។ |
-| **2** | 🔴 Critical | **Voucher Disconnected from Orders** | ✅ **RESOLVED** | `saveOrder` បញ្ជូន `voucherCode`, `discountAmount`, `subtotal`, `tax`, `serviceFee`, `total` ហើយ `orderController.js` កត់ត្រា និងគណនាបញ្ចុះតម្លៃចូល DB ត្រឹមត្រូវ។ |
-| **3** | 🔴 Critical | **Missing Financial Columns in Orders** | ✅ **RESOLVED** | បន្ថែម `subtotal`, `tax`, `serviceFee`, `discountAmount`, `voucherCode` ក្នុងតារាង `orders` និង Auto-Migration ក្នុង `db.js`។ |
-| **4** | 🔴 Critical | **Total Revenue Inflation** | ✅ **RESOLVED** | `statsController.js` គណនា Realized Revenue តែលើ Order ណាដែលបានបង់ប្រាក់ពិតប្រាកដ (`paid` ឬ `served`/`completed`)។ |
-| **5** | 🟡 Medium | **`restaurant_tables` Empty & Unused** | ✅ **RESOLVED** | បន្ថែម Seed តុទាំង ៨ ក្នុង `seed.js` និងកែ `getTables()` ឱ្យ Query ផ្ទាល់ពីតារាង `restaurant_tables` ក្នុង SQLite។ |
-| **6** | 🟡 Medium | **Missing `isFeatured` Column** | ✅ **RESOLVED** | បន្ថែម `isFeatured INTEGER DEFAULT 0` ក្នុងតារាង `vouchers` (`schema.sql`, `db.js`, `voucherController.js`)។ |
-| **7** | 🟡 Medium | **500 Error on Delete Dish/Category** | ✅ **RESOLVED** | ចាប់យក Foreign Key Constraint Violation ហើយ Return HTTP 409 Conflict ជាមួយសារពន្យល់ច្បាស់លាស់។ |
-| **8** | 🟡 Medium | **Missing Index in `schema.sql`** | ✅ **RESOLVED** | បន្ថែម `CREATE INDEX IF NOT EXISTS idx_orders_orderCode ON orders(orderCode);` ក្នុង `schema.sql`។ |
-| **9** | 🟢 Low | **Misplaced Voucher Route** | ✅ **RESOLVED** | បង្កើត `verifyVoucher` ក្នុង `voucherController.js` និងភ្ជាប់ `POST /verify` ក្នុង `voucherRoutes.js` ត្រឹមត្រូវតាមស្តង់ដារ Modular MVC។ |
-| **10** | 🟢 Low | **Inconsistent String Casing** | ✅ **RESOLVED** | បន្ថែម Normalization និងការពារតម្លៃ `paymentStatus` ក្នុង `orderController.js`។ |
-| **11** | 🟢 Low | **No Admin Deletion Guard** | ✅ **RESOLVED** | បន្ថែម Guard ក្នុង `staffController.js` ហាមឃាត់មិនឱ្យលុបគណនី Admin ចុងក្រោយគេបង្អស់ក្នុងប្រព័ន្ធ។ |
-
----
-
-## 10. ការកែលម្អកម្រិតខ្ពស់បន្ថែម (Advanced Improvements v3.0 - បានបញ្ចប់)
-
-1. **Table Status Automation:**
-   - កុម្ម៉ង់ Dine-In ➔ ស្ថានភាពតុប្តូរទៅជា `'occupied'` ដោយស្វ័យប្រវត្តិ។
-   - Order បាន Served/Completed ➔ តុប្តូរត្រឡប់មកជា `'available'` វិញ។
-   - បន្ថែម `PATCH /api/tables/:id/status` និង `PUT /api/tables/:id` សម្រាប់ Admin កែប្រែតុផ្ទាល់ដៃ។
-2. **Category Dish Count Synchronization តាមរយៈ SQLite Triggers:**
-   - បង្កើត Triggers: `trg_menu_items_insert_count`, `trg_menu_items_delete_count`, និង `trg_menu_items_update_count` ក្នុង SQLite Engine ធ្វើបច្ចុប្បន្នភាពចំនួនម្ហូបស្វ័យប្រវត្តិ។
-3. **Bakong Server-Side Payment Settlement:**
-   - បន្ថែម `POST /api/bakong/settle` និង `POST /api/bakong/webhook` បញ្ជាក់ការទូទាត់ប្រាក់នៅខាង Server ផ្ទាល់ និង Update `paymentStatus = 'paid'` & `status = 'cooking'` ដោយមិនចាំបាច់រង់ចាំ Browser Polling។
-4. **Dynamic Table Fetching លើ Frontend (`TableSelector.jsx` & `AdminMenu.jsx`):**
-   - ទាញយកទិន្នន័យតុពិតពី `GET /api/tables` បង្ហាញសញ្ញា Occupied និង Sync Floor Plan ព្រមទាំង QR Placards ជាមួយ Database ផ្ទាល់។
-5. **JWT 401 Global Response Interceptor & Auto-Logout:**
-   - បន្ថែម Axios Response Interceptor ចាប់យកកូដ 401 ជម្រះ Token ចាស់ និងនាំ User ទៅ Login ដោយស្វ័យប្រវត្តិ។
-6. **Dishes & Categories Slug Matching Fix:**
-   - ដោះស្រាយការបង្ហាញ `0 Dishes` ក្នុង Category Cards តាមរយៈ Hybrid Matching `isDishInCategory(dish, cat)`។
-
----
-
-## 11. លទ្ធផលតេស្តស្វ័យប្រវត្តិ (Automated Test Suite: 51/51 Passed)
-
-រាល់មុខងារ និងការកែសម្រួលទាំងអស់ត្រូវបានផ្ទៀងផ្ទាត់តាមរយៈ `node tests/run-all-tests.js`៖
-* **Auth & RBAC Permissions:** 7 / 7 Pass
-* **Category CRUD & Slug Mapping:** 4 / 4 Pass
-* **Menu Items & Stock Toggling:** 5 / 5 Pass
-* **Orders & Kitchen KDS 4-Stage Lifecycle:** 5 / 5 Pass
-* **Vouchers & Promo Checkout:** 6 / 6 Pass
-* **Staff Roster & HR Management:** 5 / 5 Pass
-* **Sales Metrics & Floor Plan Tables:** 2 / 2 Pass
-* **Complete E2E Restaurant Simulation:** 9 / 9 Pass
-* **Database Integrity, Vouchers & Schema Fixes:** 8 / 8 Pass
-* 🏆 **លទ្ធផលសរុប:** **51 / 51 Tests Passed (100% Pass, Zero Errors, Duration: 2.56s)**
 
 ---
 *ឯកសារនេះជាឯកសារយោងស្ថាបត្យកម្មប្រព័ន្ធទិន្នន័យផ្លូវការ (Single Source of Truth) លើ branch `database-config`។*
